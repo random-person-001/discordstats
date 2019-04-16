@@ -5,7 +5,11 @@ Built with python 3.7 and discord.py, using matplotlib.
 
 Note that in its current implementation, the graphing occurs in the main bot thread.  This is blocking, and is bad, and the bot will not respond while it occurs.  Eventually I may improve that.
 
+![example output](https://i.imgur.com/6xwWrom.png)
+
 ## Commands
+Remember to put your prefix (default is %) in front of these!
+
 `help` - show help in the discord chat
 
 `magic` - get data if necessary and show the graph

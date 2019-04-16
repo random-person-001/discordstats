@@ -10,34 +10,28 @@ from scipy.ndimage.filters import gaussian_filter1d
 
 
 SPACECORD = 391743485616717824
+LOADING = "a:loading:567758532875911169"
 
 
 class Data(commands.Cog):
     """Get stats and data n stuff"""
     def __init__(self, bot):
         self.bot = bot
-        self.cache = dict()  # server ids pointing to server data idk
-
-    def __unload(self):
-        pass
-
-    @commands.command()
-    async def foo(self, ctx):
-        await ctx.send("bar")
 
     @commands.command()
     async def get_data(self, ctx):
-        """Get channel data, going back a month"""
+        """Get the timestamps of all messages by channel, going back a month"""
+        await ctx.message.add_reaction(LOADING)
         now = datetime.datetime.now()
         begin = now - datetime.timedelta(days=30)
-        # data = [(id, name, [data]), ...]
+        # cache = [(id, name, [data]), ...]
         # with one tuple per channel, where data is a binned count of messages in that channel by hour
-        self.cache[SPACECORD] = []
+        cache = []
         after_boring_stuff = False
         for channel in ctx.bot.get_guild(SPACECORD).text_channels:
             if channel.name == 'general-space':
                 after_boring_stuff = True
-            if after_boring_stuff and not "logs" in channel.name:
+            if (after_boring_stuff and not "logs" in channel.name) or channel.name == 'staff-room':
                 data = []
                 try:
                     async for msg in channel.history(limit=None, after=begin):
@@ -45,63 +39,66 @@ class Data(commands.Cog):
                 except discord.errors.Forbidden:
                     pass
                 else:
-                    self.cache[SPACECORD].append((channel.id, channel.name, data))
+                    cache.append((channel.id, channel.name, data))
         # sort by most total messages first
-        self.cache[SPACECORD] = sorted(self.cache[SPACECORD], key=lambda x: len(x[2]), reverse=True)
+        cache = sorted(cache, key=lambda x: len(x[2]), reverse=True)
+        if len(cache) > 7:  # discard channels with little activity
+            cache = cache[:7]
         # pprint(self.cache)
-        ctx.bot.mydatacache = self.cache
-        # await ctx.send(":thumbsup:")
+        ctx.bot.mydatacache = {SPACECORD: cache}
+        ctx.bot.mydatacachebegin = begin
+        await ctx.message.remove_reaction(LOADING, ctx.me)
 
     @commands.command()
     async def clear(self, ctx):
+        """Ensure next time we graph, we'll go through channels again to get data, rather than using a cached version"""
         ctx.bot.mydatacache = None
+        await ctx.send(":ok_hand:")
 
     @commands.command(aliases=['magic'])
     async def graph_data(self, ctx):
-        smoothing = 10
+        """Create a smooth line graph of messages per hour for popular channels"""
         if not ctx.bot.mydatacache:
             print("populating cache...")
-            cmd = ctx.bot.get_command("get_data")
-            await ctx.invoke(cmd)
+            await ctx.invoke(ctx.bot.get_command("get_data"))
             print("done")
         else:
             print("cache is already filled")
 
         # Styling
-        fig, ax = plt.subplots(1, 1)
         plt.style.use('ggplot')
         plt.rcParams['legend.frameon'] = False
         plt.rcParams['savefig.facecolor'] = '#222222'
         plt.rcParams['axes.facecolor'] = '#222222'
-        plt.grid(True, 'major', 'x', ls='--', lw=.5, c='w', alpha=.3)
-        plt.grid(True, 'major', 'y', ls='--', lw=.5, c='w', alpha=.1)
-
+        fig, ax = plt.subplots()
         ax.set_xlabel('Time')
         ax.set_ylabel('Messages per hour')
-        # ax.set_title('Messages per hour by channel')
-        bins = np.linspace(1552719667, 1555398076, 24*31)
-        maxY = 0
-        for channel in ctx.bot.mydatacache[SPACECORD]:
-            if len(channel[2]) > 5:
-                # convert the epoch format to matplotlib date format
-                #mpl_data = mdates.epoch2num(channel[2])
-                # plot it
-                y, _, _ = plt.hist(channel[2], bins=bins, alpha=0)
-                ysmoothed = gaussian_filter1d(y, sigma=smoothing)
-                plt.plot(bins[:-1], ysmoothed, label=channel[1])
-                maxY = max(maxY, max(ysmoothed))
 
+        # custom binning and smoothing
+        bins = np.linspace(1552719667, 1555398076, 24*31)
+        for channel in ctx.bot.mydatacache[SPACECORD]:
+            y = self.get_y(channel, bins)
+            plt.plot(bins, y, label=channel[1], drawstyle='default')
+
+        # legends and tweaks
         legend = plt.legend(loc='upper left')
         plt.setp(legend.get_texts(), color='#888888')
-        plt.ylim(0, maxY*1.05)  # by default it'll scale to show the much higher and invisible bar graph that we don't care about, so manually resize
+        plt.grid(True, 'major', 'x', ls='--', lw=.5, c='w', alpha=.1)
+        plt.grid(True, 'major', 'y', ls='--', lw=.5, c='w', alpha=.1)
+
         plt.tight_layout()
-
-        #ax.xaxis.set_major_locator(mdates.DayLocator())
-        #ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%h'))
         plt.show()
-        #fig.savefig('whatever.png', facecolor=fig.get_facecolor(), edgecolor='none')
 
-
+    def get_y(self, channel, bins):
+        """For data on a channel, return the smoothed, binned """
+        smoothing = 13
+        y = np.zeros(len(bins))
+        begin = self.bot.mydatacachebegin.timestamp()
+        for msgtime in channel[2]:
+            y[int((msgtime-begin)/3600)] += 1
+        ysmoothed = gaussian_filter1d(y, sigma=smoothing)
+        pprint(ysmoothed)
+        return ysmoothed
 
 
 def setup(bot):

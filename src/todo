@@ -8,14 +8,14 @@ Next
 [ ] x axis proper format for time
 [X] sort channels by total messages, descending
 [X] y axis resizing
-[ ] full dark theme
+[X] full dark theme
 
 Later
 [X] better legend
 [ ] general ui tweaks
 [ ] embed in chat
 [ ] flexible design
-[ ] reactions to commands for feedback
+[X] reactions to commands for feedback
 
 Much later
 [ ] redo cache
