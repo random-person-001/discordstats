@@ -1,0 +1,5 @@
+
+prefix = "%"
+token = "aoeu.id.htns"  # <-- change that
+
+extensions = ["data"]
