@@ -6,12 +6,12 @@ Done
 
 Next
 [ ] x axis proper format for time
-[ ] sort channels by total messages, descending
-[ ] y axis resizing
+[X] sort channels by total messages, descending
+[X] y axis resizing
 [ ] full dark theme
 
 Later
-[ ] better legend
+[X] better legend
 [ ] general ui tweaks
 [ ] embed in chat
 [ ] flexible design
