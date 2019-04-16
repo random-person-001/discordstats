@@ -1,16 +1,17 @@
 # Discord Data bot
-*Graph stats about channel activity*
+Graph stats about channel activity
 
-## Examples
+Built with python 3.7 and discord.py, using matplotlib.
 
-Coming soon!
+Note that in its current implementation, the graphing occurs in the main bot thread.  This is blocking, and is bad, and the bot will not respond while it occurs.  Eventually I may improve that.
 
 ## Commands
 `help` - show help in the discord chat
 
-## Installing
-This is built with python 3.7 and discord.py, using the graphing libraries XXX
+`magic` - get data if necessary and show the graph
 
+
+## Installing
 In a terminal, run `git clone https://github.com/random-person-001/discordstats.git && cd discordstats`
 
 You'll need a discord token to get the bot running. Rename `exampleconfig.toml` to `config.toml` and put the token in there.
