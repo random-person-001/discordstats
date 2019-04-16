@@ -19,7 +19,6 @@ def prep():
               "(more help can be found in the file `readme.md`)")
         return
     else:
-        print(config)
         for key in ("token", "prefix", "extensions"):
             if key not in config:
                 print("Oof, looks like you're missing the entry for `{}` in the config.toml file. "
@@ -63,6 +62,7 @@ async def reload(ctx, extension_name: str):
 
 
 if __name__ == "__main__":
+    bot.mydatacache = None  # for stuffs
     if config:
         for extension in config['extensions']:
             try:

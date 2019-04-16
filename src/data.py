@@ -1,10 +1,10 @@
 import json
-
-import numpy as np
 import datetime
 from pprint import pprint
-import matplotlib.pyplot as plt
 
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import discord
 from discord.ext import commands
 
@@ -14,7 +14,6 @@ class Data(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.cache = dict()  # server ids pointing to server data idk
-        self.bot.mydatacache = None
 
     def __unload(self):
         pass
@@ -32,45 +31,39 @@ class Data(commands.Cog):
         # with one tuple per channel, where data is a binned count of messages in that channel by hour
         self.cache[ctx.guild.id] = []
         for channel in ctx.guild.text_channels:
-            data = np.zeros(24*31, dtype=int)  # list of messages in each slot, where each slot is an hour long
+            data = []
             async for msg in channel.history(limit=None, after=begin):
-                age = (now - discord.utils.snowflake_time(msg.id)).total_seconds()
-                data[int(age/60/60)] += 1
+                data.append(discord.utils.snowflake_time(msg.id).timestamp())
             self.cache[ctx.guild.id].append((channel.id, channel.name, data))
-        pprint(self.cache)
-        self.bot.mydatacache = self.cache
+        #  pprint(self.cache)
+        ctx.bot.mydatacache = self.cache
         await ctx.send(":thumbsup:")
         with open("dump.json", "w") as f:
             f.write(json.dumps(self.cache))
 
-
-
     @commands.command()
     async def graph_data(self, ctx):
-        if not self.bot.mydatacache:
-            await ctx.invoke("get_data")
+        num_bins = 10
+        if not ctx.bot.mydatacache:
+            print("populating cache")
+            cmd = ctx.bot.get_command("get_data")
+            await ctx.invoke(cmd)
+        else:
+            print("cache is already filled")
 
-        t = np.linspace(0.0, 2.0, 201)
-        s = np.sin(2 * np.pi * t)
-
-        # 1) RGB tuple:
-        fig, ax = plt.subplots(facecolor=(.18, .31, .31))
-        # 2) hex string:
-        ax.set_facecolor('#eafff5')
-        # 3) gray level string:
-        ax.set_title('Voltage vs. time chart', color='0.7')
-        # 4) single letter color string
-        ax.set_xlabel('time (s)', color='c')
-        # 5) a named color:
-        ax.set_ylabel('voltage (mV)', color='peachpuff')
-        # 6) a named xkcd color:
-        ax.plot(t, s, 'xkcd:crimson')
-        # 7) Cn notation:
-        ax.plot(t, .7 * s, color='C4', linestyle='--')
-        # 8) tab notation:
-        ax.tick_params(labelcolor='tab:orange')
-
-        plt.show()
+        #fig, ax = plt.subplots(1, 1)
+        for channel in ctx.bot.mydatacache[ctx.guild.id]:
+            if len(channel[2]) > 2:
+                # convert the epoch format to matplotlib date format
+                mpl_data = mdates.epoch2num(channel[2])
+                # plot it
+                n, x, _ = plt.hist(mpl_data, bins=num_bins, histtype='step', align='mid')
+                bin_centers = 0.5 * (x[1:] + x[:-1])
+                plt.plot(bin_centers, n, color='brown')  ## using bin_centers rather than edges
+                plt.show()
+        #ax.xaxis.set_major_locator(mdates.DayLocator())
+        ##ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%h'))
+        #plt.show()
 
 
 def setup(bot):
