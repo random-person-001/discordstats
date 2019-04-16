@@ -10,6 +10,7 @@ discord-py = "*"
 toml = "*"
 numpy = "*"
 matplotlib = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.7"

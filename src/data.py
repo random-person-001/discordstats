@@ -5,8 +5,13 @@ from pprint import pprint
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from scipy.ndimage.filters import gaussian_filter1d
+
 import discord
 from discord.ext import commands
+
+
+SPACECORD = 391743485616717824
 
 
 class Data(commands.Cog):
@@ -29,38 +34,57 @@ class Data(commands.Cog):
         begin = now - datetime.timedelta(days=30)
         # data = [(id, name, [data]), ...]
         # with one tuple per channel, where data is a binned count of messages in that channel by hour
-        self.cache[ctx.guild.id] = []
-        for channel in ctx.guild.text_channels:
-            data = []
-            async for msg in channel.history(limit=None, after=begin):
-                data.append(discord.utils.snowflake_time(msg.id).timestamp())
-            self.cache[ctx.guild.id].append((channel.id, channel.name, data))
+        self.cache[SPACECORD] = []
+        after_boring_stuff = False
+        for channel in ctx.bot.get_guild(SPACECORD).text_channels:
+            if channel.name == 'general-space':
+                after_boring_stuff = True
+            if after_boring_stuff:
+                data = []
+                try:
+                    async for msg in channel.history(limit=None, after=begin):
+                        data.append(discord.utils.snowflake_time(msg.id).timestamp())
+                except discord.errors.Forbidden:
+                    pass
+                else:
+                    self.cache[SPACECORD].append((channel.id, channel.name, data))
+
         #  pprint(self.cache)
         ctx.bot.mydatacache = self.cache
-        await ctx.send(":thumbsup:")
-        with open("dump.json", "w") as f:
-            f.write(json.dumps(self.cache))
+        #await ctx.send(":thumbsup:")
+        #with open("dump.json", "w") as f:
+        #    f.write(json.dumps(self.cache))
 
     @commands.command()
+    async def clear(self, ctx):
+        ctx.bot.mydatacache = None
+
+    @commands.command(aliases=['magic'])
     async def graph_data(self, ctx):
         num_bins = 10
+        smoothing = 5
         if not ctx.bot.mydatacache:
-            print("populating cache")
+            print("populating cache...")
             cmd = ctx.bot.get_command("get_data")
             await ctx.invoke(cmd)
+            print("done")
         else:
             print("cache is already filled")
 
         #fig, ax = plt.subplots(1, 1)
-        for channel in ctx.bot.mydatacache[ctx.guild.id]:
+        bins = np.linspace(1552719667, 1555398076, 8*31)
+        for channel in ctx.bot.mydatacache[SPACECORD]:
             if len(channel[2]) > 2:
                 # convert the epoch format to matplotlib date format
-                mpl_data = mdates.epoch2num(channel[2])
+                # mpl_data = mdates.epoch2num(channel[2])
                 # plot it
-                n, x, _ = plt.hist(mpl_data, bins=num_bins, histtype='step', align='mid')
-                bin_centers = 0.5 * (x[1:] + x[:-1])
-                plt.plot(bin_centers, n, color='brown')  ## using bin_centers rather than edges
-                plt.show()
+                y, _, _ = plt.hist(channel[2], bins=bins, alpha=0)
+                ysmoothed = gaussian_filter1d(y, sigma=smoothing)
+                plt.plot(bins[:-1], ysmoothed, label=channel[1])
+        plt.legend(loc='upper right')
+        #plt.yscale("log")
+        plt.grid(True, 'major', 'x', ls='--', lw=.5, c='k', alpha=.3)
+        plt.show()
         #ax.xaxis.set_major_locator(mdates.DayLocator())
         ##ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%h'))
         #plt.show()
