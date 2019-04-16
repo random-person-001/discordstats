@@ -1,0 +1,23 @@
+**ROADMAP**
+Done
+[X] smooth lines for msg frequencies of various channels
+[X] partial dark theme
+[X] streamlined testing
+
+Next
+[ ] x axis proper format for time
+[ ] sort channels by total messages, descending
+[ ] y axis resizing
+[ ] full dark theme
+
+Later
+[ ] better legend
+[ ] general ui tweaks
+[ ] embed in chat
+[ ] flexible design
+[ ] reactions to commands for feedback
+
+Much later
+[ ] redo cache
+[ ] own bot user?
+[ ] moar, different stats

@@ -1,4 +1,3 @@
-import json
 import datetime
 from pprint import pprint
 
@@ -39,7 +38,7 @@ class Data(commands.Cog):
         for channel in ctx.bot.get_guild(SPACECORD).text_channels:
             if channel.name == 'general-space':
                 after_boring_stuff = True
-            if after_boring_stuff:
+            if after_boring_stuff and not "logs" in channel.name:
                 data = []
                 try:
                     async for msg in channel.history(limit=None, after=begin):
@@ -48,12 +47,9 @@ class Data(commands.Cog):
                     pass
                 else:
                     self.cache[SPACECORD].append((channel.id, channel.name, data))
-
-        #  pprint(self.cache)
+        # pprint(self.cache)
         ctx.bot.mydatacache = self.cache
-        #await ctx.send(":thumbsup:")
-        #with open("dump.json", "w") as f:
-        #    f.write(json.dumps(self.cache))
+        # await ctx.send(":thumbsup:")
 
     @commands.command()
     async def clear(self, ctx):
@@ -61,7 +57,6 @@ class Data(commands.Cog):
 
     @commands.command(aliases=['magic'])
     async def graph_data(self, ctx):
-        num_bins = 10
         smoothing = 5
         if not ctx.bot.mydatacache:
             print("populating cache...")
@@ -71,7 +66,14 @@ class Data(commands.Cog):
         else:
             print("cache is already filled")
 
-        #fig, ax = plt.subplots(1, 1)
+        # Styling
+        plt.style.use('ggplot')
+        plt.rcParams['axes.facecolor'] = '#222222'
+        plt.rcParams['savefig.facecolor'] = '#222222'
+        plt.grid(True, 'major', 'x', ls='--', lw=.5, c='w', alpha=.3)
+        plt.grid(True, 'major', 'y', ls='--', lw=.5, c='w', alpha=.1)
+
+        # fig, ax = plt.subplots(1, 1)
         bins = np.linspace(1552719667, 1555398076, 8*31)
         for channel in ctx.bot.mydatacache[SPACECORD]:
             if len(channel[2]) > 2:
@@ -82,12 +84,10 @@ class Data(commands.Cog):
                 ysmoothed = gaussian_filter1d(y, sigma=smoothing)
                 plt.plot(bins[:-1], ysmoothed, label=channel[1])
         plt.legend(loc='upper right')
-        #plt.yscale("log")
-        plt.grid(True, 'major', 'x', ls='--', lw=.5, c='k', alpha=.3)
+
         plt.show()
-        #ax.xaxis.set_major_locator(mdates.DayLocator())
-        ##ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%h'))
-        #plt.show()
+        # ax.xaxis.set_major_locator(mdates.DayLocator())
+        # #ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%h'))
 
 
 def setup(bot):
