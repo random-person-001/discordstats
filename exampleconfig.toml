@@ -1,5 +1,17 @@
 
+# the prefix to call bot commands with
 prefix = "%"
-token = "aoeu.id.htns"  # <-- change that
 
+# the discord token the bot uses to log in.  You'll need to change this.
+token = "aoeu.id.htns"
+
+# the ID of the guild you want to analyze.  In future versions this will be flexible or something, idk
+guildID = 391743485616717824
+
+# the emoji to indicate it's searching history for stuff
+# if you want it to be an animated emoji, follow the format "a:emoji_name:emoji_id" (the id might be tricky to get)
+# like "a:loading:567758532875911169"
+loadingemoji = "🔄"  #
+
+# tell the bot to load up data.py when it starts
 extensions = ["data"]

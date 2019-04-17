@@ -11,10 +11,6 @@ from discord.ext import commands
 from scipy.ndimage.filters import gaussian_filter1d
 
 
-SPACECORD = 391743485616717824
-LOADING = "a:loading:567758532875911169"
-
-
 class Channel:
     def __init__(self, name, data):
         self.name = name
@@ -39,13 +35,13 @@ class Data(commands.Cog):
     @commands.command()
     async def get_data(self, ctx):
         """Get the timestamps of all messages by channel, going back a month"""
-        await ctx.message.add_reaction(LOADING)
+        await ctx.message.add_reaction(ctx.bot.config['loadingemoji'])
         now = datetime.datetime.now()
         begin = now - datetime.timedelta(days=30)
         # cache is a list of [custom] Channel objects
         cache = []
         after_boring_stuff = False
-        for channel in ctx.bot.get_guild(SPACECORD).text_channels:
+        for channel in ctx.bot.get_guild(ctx.bot.config['guildID']).text_channels:
             if channel.name == 'general-space':
                 after_boring_stuff = True
             if (after_boring_stuff and not "logs" in channel.name) or channel.name == 'staff-room':
@@ -62,16 +58,15 @@ class Data(commands.Cog):
         if len(cache) > 6:  # discard channels with little activity
             cache = cache[:6]
         # pprint(self.cache)
-        ctx.bot.mydatacache = {SPACECORD: cache}
+        ctx.bot.mydatacache = {ctx.bot.config['guildID']: cache}
         ctx.bot.mydatacachebegin = begin
-        await ctx.message.remove_reaction(LOADING, ctx.me)
+        await ctx.message.remove_reaction(ctx.bot.config['loadingemoji'], ctx.me)
 
     @commands.command()
     async def clear(self, ctx):
         """Ensure next time we graph, we'll go through channels again to get data, rather than using a cached version"""
         ctx.bot.mydatacache = None
         await ctx.send(":ok_hand:")
-
 
     @commands.command(aliases=['magic'])
     async def graph_data(self, ctx):
@@ -96,7 +91,7 @@ class Data(commands.Cog):
 
         # custom binning and smoothing
         bins = np.linspace(1552719667, 1555398076, 24*31)
-        chans = ctx.bot.mydatacache[SPACECORD]
+        chans = ctx.bot.mydatacache[ctx.bot.config['guildID']]
         i=0
 
         for i in range(len(chans)):
@@ -107,14 +102,14 @@ class Data(commands.Cog):
         for channel in chans:
             x, y = interpolate(bins, channel.y)
             norm = colors.Normalize(vmin=-global_max/1.5, vmax=global_max*1.6)
-            plt.scatter(x, y, label=channel.name, c=y, s=10, cmap=colormaps[i], norm=norm)
+            plt.scatter(x, y, label=channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
             i+=1
 
         # legends and tweaks
         legend = plt.legend(loc='upper left')
         plt.setp(legend.get_texts(), color='#888888')
-        plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.1)
-        plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.1)
+        plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.2)
+        plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.2)
 
         plt.tight_layout()
         plt.show()

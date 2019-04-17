@@ -62,8 +62,9 @@ async def reload(ctx, extension_name: str):
 
 
 if __name__ == "__main__":
-    bot.mydatacache = None  # for stuffs
     if config:
+        bot.config = config
+        bot.mydatacache = None  # for stuffs
         for extension in config['extensions']:
             try:
                 bot.load_extension(extension)
