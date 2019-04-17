@@ -11,7 +11,7 @@ guildID = 391743485616717824
 # the emoji to indicate it's searching history for stuff
 # if you want it to be an animated emoji, follow the format "a:emoji_name:emoji_id" (the id might be tricky to get)
 # like "a:loading:567758532875911169"
-loadingemoji = "🔄"  #
+loadingemoji = "🔄"
 
 # tell the bot to load up data.py when it starts
 extensions = ["data"]

@@ -1,21 +1,24 @@
 **ROADMAP**
+
 Done
 [X] smooth lines for msg frequencies of various channels
 [X] partial dark theme
 [X] streamlined testing
-
-Next
-[ ] x axis proper format for time
+[X] x axis proper format for time
 [X] sort channels by total messages, descending
 [X] y axis resizing
 [X] full dark theme
-
-Later
 [X] better legend
-[ ] general ui tweaks
-[ ] embed in chat
-[ ] flexible design
+[X] embed in chat
+[X] flexible design
 [X] reactions to commands for feedback
+
+Next
+[ ] legend color codes
+[ ] general ui tweaks
+[ ] clearer color scheme?
+[ ] ability to exclude channels
+[ ] bot-only storage file? (for channel exclusion settings, without overwriting config.toml
 
 Much later
 [ ] redo cache
