@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 import matplotlib.colors as colors
 import matplotlib.dates as mdates
+import toml
 from discord.ext import commands
 from scipy.ndimage.filters import gaussian_filter1d
 
@@ -28,10 +29,41 @@ def get_max(chans):
     return max_y
 
 
+def sync_db(bot):
+    """Write out the current state of the bot db to a persistent file"""
+    with open("db.toml", "w") as f:
+        toml.dump(bot.db, f)
+
+
 class Data(commands.Cog):
     """Get stats and data n stuff"""
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.command()
+    async def ignore(self, ctx, channel: discord.TextChannel):
+        """
+        Exclude a channel from being graphed
+
+        This will clear any caches that the bot has for this guild.
+        """
+        ctx.bot.db['excluded_channels'].append(channel.id)
+        sync_db(ctx.bot)
+        await ctx.invoke(ctx.bot.get_command('clear'))
+
+    @commands.command()
+    async def unignore(self, ctx, channel: discord.TextChannel):
+        """
+        Include a channel from being graphed, if it was excluded before
+
+        This will clear any caches that the bot has for this guild.
+        """
+        if channel.id in ctx.bot.db['excluded_channels']:
+            ctx.bot.db['excluded_channels'].remove(channel.id)
+            sync_db(ctx.bot)
+            await ctx.invoke(ctx.bot.get_command('clear'))
+        else:
+            await ctx.send('That\'s already included no need to change :thumbs_up:')
 
     @commands.command()
     async def get_data(self, ctx):
@@ -43,14 +75,15 @@ class Data(commands.Cog):
         # cache is a list of Channel objects, as defined above
         cache = []
         for channel in ctx.bot.get_guild(ctx.bot.config['guildID']).text_channels:
-            data = []
-            try:
-                async for msg in channel.history(limit=None, after=begin):
-                    data.append(discord.utils.snowflake_time(msg.id).timestamp())
-            except discord.errors.Forbidden:
-                pass  # silently ignore channels we don't have perms to read
-            else:
-                cache.append(Channel(channel.name, data))
+            if channel.id not in ctx.bot.db['excluded_channels']:
+                data = []
+                try:
+                    async for msg in channel.history(limit=None, after=begin):
+                        data.append(discord.utils.snowflake_time(msg.id).timestamp())
+                except discord.errors.Forbidden:
+                    pass  # silently ignore channels we don't have perms to read
+                else:
+                    cache.append(Channel(channel.name, data))
         # sort by most total messages first
         cache = sorted(cache, key=lambda c: len(c.timestamps), reverse=True)
         # discard channels with little activity (also we only have six colormaps)
@@ -82,7 +115,6 @@ class Data(commands.Cog):
 
         # Styling
         plt.style.use('ggplot')
-        colormaps = ['Reds_r', 'YlOrBr_r', 'Greens_r', 'Blues_r', 'Purples_r', 'cividis']
         plt.rcParams['legend.frameon'] = False
         plt.rcParams["figure.figsize"] = [9, 6]
         plt.rcParams['savefig.facecolor'] = '#2C2F33'
@@ -102,7 +134,7 @@ class Data(commands.Cog):
         for i in range(len(chans)):
             y = self.get_y(chans[i], bins)
             chans[i].y = y
-            chans[i].colormap = colormaps[i]
+            chans[i].colormap = ctx.bot.db['colormaps'][i]
         # we need this so that colormaps for each series stretch to the global max, rather than the max of that series
         global_max = get_max(chans)
         # second pass through data, doing interpolation and actually plotting

@@ -12,13 +12,13 @@ Done
 [X] embed in chat
 [X] flexible design
 [X] reactions to commands for feedback
+[X] ability to exclude channels
+[X] bot-only storage file
 
 Next
 [ ] legend color codes
 [ ] general ui tweaks
 [ ] clearer color scheme?
-[ ] ability to exclude channels
-[ ] bot-only storage file? (for channel exclusion settings, without overwriting config.toml)
 
 Much later
 [ ] redo cache

@@ -3,6 +3,26 @@ import toml
 from discord.ext import commands
 
 
+def write_db():
+    """Write out a db file with default settings"""
+    print('Didn\'t find a db file, so creating a new one with default settings')
+    data = {
+        'excluded_channels': [],
+        'colormaps': ["Reds_r", "YlOrBr_r", "Greens_r", "Blues_r", "Purples_r", "cividis"]
+    }
+    with open("db.toml", "w") as f:
+        toml.dump(data, f)
+    return data
+
+
+def get_db():
+    """Get the persistent settings for the bot. The bot owner shouldn't need to worry about this"""
+    try:
+        return toml.load("db.toml")
+    except:
+        return write_db()
+
+
 def prep():
     """Make sure the environment and config stuff is set up right, giving hopefully helpful messages if not"""
     if discord.__version__[0] != '1':  # async is about 0.16, rewrite is 1.0+
@@ -29,7 +49,6 @@ def prep():
 
 config = prep()
 bot = commands.Bot(command_prefix=config['prefix'])
-bot.config = config
 
 
 @commands.cooldown(rate=1, per=7)
@@ -64,7 +83,8 @@ async def reload(ctx, extension_name: str):
 if __name__ == "__main__":
     if config:
         bot.config = config
-        bot.mydatacache = None  # for stuffs
+        bot.db = get_db()  # load the db file. User doesn't have to touch this
+        bot.mydatacache = None  # for caching data for graphing
         for extension in config['extensions']:
             try:
                 bot.load_extension(extension)
