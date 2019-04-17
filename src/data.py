@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.path as mpath
 import matplotlib.colors as colors
 import matplotlib.dates as mdates
+import matplotlib.cm as cm
 import toml
 from discord.ext import commands
 from scipy.ndimage.filters import gaussian_filter1d
@@ -32,6 +33,7 @@ def get_max(chans):
 def sync_db(bot):
     """Write out the current state of the bot db to a persistent file"""
     with open("db.toml", "w") as f:
+        f.write("# This file was automatically generated and will be overwritten when settings are updated\n")
         toml.dump(bot.db, f)
 
 
@@ -40,7 +42,7 @@ class Data(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
+    @commands.command(aliases=['exclude'])
     async def ignore(self, ctx, channel: discord.TextChannel):
         """
         Exclude a channel from being graphed
@@ -67,7 +69,11 @@ class Data(commands.Cog):
 
     @commands.command()
     async def get_data(self, ctx):
-        """Get the timestamps of all messages by channel, going back a month"""
+        """
+        Get the timestamps of all messages by channel, going back a month
+
+        This takes a while.
+        """
         print("populating cache...")
         await ctx.message.add_reaction(ctx.bot.config['loadingemoji'])
         now = datetime.datetime.now()
@@ -86,9 +92,10 @@ class Data(commands.Cog):
                     cache.append(Channel(channel.name, data))
         # sort by most total messages first
         cache = sorted(cache, key=lambda c: len(c.timestamps), reverse=True)
-        # discard channels with little activity (also we only have six colormaps)
-        if len(cache) > 6:
-            cache = cache[:6]
+        # discard channels with little activity (also we only have so many colormaps)
+        colormap_count = len(ctx.bot.config['colormaps'])
+        if len(cache) > colormap_count:
+            cache = cache[:colormap_count]
         # pprint(self.cache)
         ctx.bot.mydatacache = {ctx.bot.config['guildID']: cache}
         ctx.bot.mydatacachebegin = begin
@@ -111,7 +118,7 @@ class Data(commands.Cog):
 
         # custom binning, rather than using the (slow) default histogram function and hiding it
         chans = ctx.bot.mydatacache[ctx.bot.config['guildID']]
-        bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24*30.5))  # some fudge space
+        bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24*30.5))  # leave some fudge space
 
         # Styling
         plt.style.use('ggplot')
@@ -131,10 +138,10 @@ class Data(commands.Cog):
             ax.spines[pos].set_visible(False)
 
         # first pass through data, to get smoothed values to plot
-        for i in range(len(chans)):
-            y = self.get_y(chans[i], bins)
-            chans[i].y = y
-            chans[i].colormap = ctx.bot.db['colormaps'][i]
+        for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
+            y = self.get_y(chan, bins)
+            chan.y = y
+            chan.colormap = cmap
         # we need this so that colormaps for each series stretch to the global max, rather than the max of that series
         global_max = get_max(chans)
         # second pass through data, doing interpolation and actually plotting
@@ -145,11 +152,17 @@ class Data(commands.Cog):
             norm = colors.Normalize(vmin=-global_max/1.5, vmax=global_max*2.5)
             # boring conversions.  Prob a better way to do this but whatevs
             x = [datetime.datetime.fromtimestamp(t) for t in x]
-            plt.scatter(x, y, label='#'+channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
+            plt.scatter(x, y, label=''+channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
 
         # legends and tweaks
-        legend = plt.legend(loc='upper left', prop={'size': 13})
-        plt.setp(legend.get_texts(), color='#888888')
+        legend = plt.legend(loc='upper left', prop={'size': 13}, handlelength=0)
+        # set legend labels to the right color
+        for text, chan in zip(legend.get_texts(), chans):
+            text.set_color(cm.get_cmap(chan.colormap)(.5))
+        # get rid of the (usually colored) dots next to the text entries in the legend
+        for item in legend.legendHandles:
+            item.set_visible(False)
+        # grid layout
         plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.2)
         plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.2)
         plt.tight_layout()

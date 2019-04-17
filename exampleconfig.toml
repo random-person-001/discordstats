@@ -15,3 +15,8 @@ loadingemoji = "🔄"
 
 # tell the bot to load up data.py when it starts
 extensions = ["data"]
+
+# the color gradients to use for the graphs
+# for more info and options, see https://matplotlib.org/tutorials/colors/colormaps.html
+# the number of colormaps specified here is how many channels will be graphed
+colormaps = ["Reds_r", "YlOrBr_r", "Greens_r", "Blues_r", "Purples_r", "cividis"]

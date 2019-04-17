@@ -7,10 +7,10 @@ def write_db():
     """Write out a db file with default settings"""
     print('Didn\'t find a db file, so creating a new one with default settings')
     data = {
-        'excluded_channels': [],
-        'colormaps': ["Reds_r", "YlOrBr_r", "Greens_r", "Blues_r", "Purples_r", "cividis"]
+        'excluded_channels': []
     }
     with open("db.toml", "w") as f:
+        f.write("# This file was automatically generated and will be overwritten when settings are updated\n")
         toml.dump(data, f)
     return data
 
