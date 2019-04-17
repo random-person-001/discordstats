@@ -18,7 +18,7 @@ Next
 [ ] general ui tweaks
 [ ] clearer color scheme?
 [ ] ability to exclude channels
-[ ] bot-only storage file? (for channel exclusion settings, without overwriting config.toml
+[ ] bot-only storage file? (for channel exclusion settings, without overwriting config.toml)
 
 Much later
 [ ] redo cache
