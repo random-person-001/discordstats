@@ -16,13 +16,15 @@ Done
 [X] bot-only storage file
 [X] legend color codes
 [X] general ui tweaks
+[X] redo cache
+[X] command for nonsmoothed bar graph
 
 
 Next
-[ ] command for nonsmoothed bar graph
+[ ] fix x axis scaling/label issues
+[ ] increase bar graph bin size
 
 
 later
-[ ] redo cache
-[ ] own bot user?
 [ ] moar, different stats
+[ ] graphing occur in own thread (less blocking)

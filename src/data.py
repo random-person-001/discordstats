@@ -1,20 +1,21 @@
 import datetime
+import toml
 import io
 
 import discord
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.path as mpath
-import matplotlib.colors as colors
 import matplotlib.dates as mdates
+import matplotlib.colors as colors
 import matplotlib.cm as cm
-import toml
 from discord.ext import commands
 from scipy.ndimage.filters import gaussian_filter1d
 
 
 class Channel:
     """Data struct for the things I care about in a channel"""
+
     def __init__(self, name, data):
         self.name = name
         self.timestamps = data  # timestamps of all messages sent in last month in channel
@@ -71,11 +72,11 @@ def postplot_styling(chans):
     plt.tight_layout()
 
 
-def preplot_styling(ctx):
+def preplot_styling(ctx, guild_id):
     """Configure the graph style (like the legend), after calling the plot functions"""
     # custom binning, rather than using the (slow) default histogram function and hiding it
-    chans = ctx.bot.mydatacache[ctx.bot.config['guildID']]
-    bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24*30.5))  # leave some fudge space
+    chans = ctx.bot.mydatacache[guild_id][1]
+    bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
 
     # Styling
     fig, ax = plt.subplots()
@@ -88,8 +89,27 @@ def preplot_styling(ctx):
     return chans, bins, fig, ax
 
 
+async def get_guild_id(ctx, guild_id):
+    """Convenience method for handling no id, invalid id, and valid id from a parameter"""
+    if guild_id is None:
+        return ctx.guild.id
+    if ctx.bot.get_guild(guild_id) is not None:
+        return guild_id
+    await ctx.send("Oops that didn't look like the ID of a guild I'm in."
+                   " Try just the command without anything after")
+    return None
+
+
+"""Bot data cache has the following structure:
+{
+Guild id : (datetime object of start of era covered, [list of unix timestamps of messages in that channel])
+}
+"""
+
+
 class Data(commands.Cog):
     """Get stats and data n stuff"""
+
     def __init__(self, bot):
         self.bot = bot
         # Graph styling
@@ -110,7 +130,7 @@ class Data(commands.Cog):
         """
         ctx.bot.db['excluded_channels'].append(channel.id)
         sync_db(ctx.bot)
-        await ctx.invoke(ctx.bot.get_command('clear'))
+        await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
 
     @commands.command()
     async def unignore(self, ctx, channel: discord.TextChannel):
@@ -122,24 +142,27 @@ class Data(commands.Cog):
         if channel.id in ctx.bot.db['excluded_channels']:
             ctx.bot.db['excluded_channels'].remove(channel.id)
             sync_db(ctx.bot)
-            await ctx.invoke(ctx.bot.get_command('clear'))
+            await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
         else:
             await ctx.send('That\'s already included no need to change :thumbs_up:')
 
     @commands.command()
-    async def get_data(self, ctx):
+    async def get_data(self, ctx, guild_id: int = None):
         """
         Get the timestamps of all messages by channel, going back a month
 
         This takes a while.
         """
+        guild_id = await get_guild_id(ctx, guild_id)
+        if not guild_id:
+            return
         print('populating cache...')
         await ctx.message.add_reaction(ctx.bot.config['loadingemoji'])
         now = datetime.datetime.now()
         begin = now - datetime.timedelta(days=30)
         # cache is a list of Channel objects, as defined above
         cache = []
-        for channel in ctx.bot.get_guild(ctx.bot.config['guildID']).text_channels:
+        for channel in ctx.bot.get_guild(guild_id).text_channels:
             if channel.id not in ctx.bot.db['excluded_channels']:
                 data = []
                 try:
@@ -156,29 +179,36 @@ class Data(commands.Cog):
         if len(cache) > colormap_count:
             cache = cache[:colormap_count]
         # pprint(self.cache)
-        ctx.bot.mydatacache = {ctx.bot.config['guildID']: cache}
-        ctx.bot.mydatacachebegin = begin
+        ctx.bot.mydatacache[guild_id] = (begin, cache)
         print("done")
         await ctx.message.remove_reaction(ctx.bot.config['loadingemoji'], ctx.me)
 
     @commands.command()
-    async def clear(self, ctx):
+    async def clear(self, ctx, guild_id: int = None):
         """Ensure next time we graph, we'll go through channels again to get data, rather than using a cached version"""
-        ctx.bot.mydatacache = None
+        guild_id = await get_guild_id(ctx, guild_id)
+        if not guild_id:
+            return
+        if guild_id in ctx.bot.mydatacache:
+            ctx.bot.mydatacache.pop(guild_id)
         await ctx.send(":ok_hand:")
 
     @commands.command(aliases=['magic', 'line'])
-    async def pretty_graph(self, ctx):
+    async def pretty_graph(self, ctx, guild_id: int = None):
         """Create a smooth line graph of messages per hour for popular channels"""
-        if not ctx.bot.mydatacache:
-            await ctx.invoke(ctx.bot.get_command('get_data'))
+        guild_id = await get_guild_id(ctx, guild_id)
+        if not guild_id:
+            return
+
+        if guild_id not in ctx.bot.mydatacache:
+            await ctx.invoke(ctx.bot.get_command('get_data'), guild_id=guild_id)
         else:
             print('cache is already filled')
 
-        chans, bins, fig, ax = preplot_styling(ctx)
+        chans, bins, fig, ax = preplot_styling(ctx, guild_id)
         # first pass through data, to get smoothed values to plot
         for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
-            y = self.get_y(chan, bins)
+            y = self.get_y(chan, bins, guild_id)
             chan.y = y
             chan.colormap = cmap
         # we need this so that colormaps for each series stretch to the global max, rather than the max of that series
@@ -188,26 +218,29 @@ class Data(commands.Cog):
             # we graph a scatter plot not a line plot, so need to make enough points that it looks continuous
             x, y = interpolate(bins, channel.y)
             # stretch the colormap; we don't use extremes cuz they ugly
-            norm = colors.Normalize(vmin=-global_max/1.5, vmax=global_max*2.5)
+            norm = colors.Normalize(vmin=-global_max / 1.5, vmax=global_max * 2.5)
             # boring conversions.  Prob a better way to do this but whatevs
             x = [datetime.datetime.fromtimestamp(t) for t in x]
-            plt.scatter(x, y, label=''+channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
+            plt.scatter(x, y, label=channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
 
         postplot_styling(chans)
         await send_plot(ctx)
 
     @commands.command(aliases=['bar'])
-    async def rawer_graph(self, ctx):
+    async def rawer_graph(self, ctx, guild_id: int = None):
         """Create a bar chart of messages per hour for popular channels"""
-        if not ctx.bot.mydatacache:
-            await ctx.invoke(ctx.bot.get_command('get_data'))
+        guild_id = await get_guild_id(ctx, guild_id)
+        if not guild_id:
+            return
+        if guild_id not in ctx.bot.mydatacache:
+            await ctx.invoke(ctx.bot.get_command('get_data'), guild_id=guild_id)
         else:
             print('cache is already filled')
 
-        chans, bins, fig, ax = preplot_styling(ctx)
+        chans, bins, fig, ax = preplot_styling(ctx, guild_id)
         # first pass through data, to get smoothed values to plot
         for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
-            y = self.get_y(chan, bins, smoothing=0)
+            y = self.get_y(chan, bins, guild_id, smoothing=0)
             chan.y = y
             chan.colormap = cmap
         # second pass through data, doing interpolation and actually plotting
@@ -219,12 +252,12 @@ class Data(commands.Cog):
         postplot_styling(chans)
         await send_plot(ctx)
 
-    def get_y(self, channel, bins, smoothing=13):
+    def get_y(self, channel, bins, guild_id, smoothing=13):
         """For data on a channel, return the smoothed, binned y values to be interpolated and graphed"""
         y = np.zeros(len(bins))
-        begin = self.bot.mydatacachebegin.timestamp()
-        for msgtime in channel.timestamps:
-            y[int((msgtime-begin)/3600)] += 1
+        begin = self.bot.mydatacache[guild_id][0].timestamp()
+        for msg_time in channel.timestamps:
+            y[int((msg_time - begin) / 3600)] += 1
         if smoothing > 1:
             return gaussian_filter1d(y, sigma=smoothing)
         return y

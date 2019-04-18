@@ -84,7 +84,7 @@ if __name__ == "__main__":
     if config:
         bot.config = config
         bot.db = get_db()  # load the db file. User doesn't have to touch this
-        bot.mydatacache = None  # for caching data for graphing
+        bot.mydatacache = dict()  # for caching data for graphing
         for extension in config['extensions']:
             try:
                 bot.load_extension(extension)

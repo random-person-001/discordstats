@@ -10,9 +10,9 @@ Note that in its current implementation, the graphing occurs in the main bot thr
 ## Commands
 Remember to put your prefix (default is %) in front of these!
 
-`help` - show help in the discord chat
+`line` - Show a pretty, smooth line graph of channel activity over time
 
-`magic` - get data if necessary and show the graph
+`bar` - show a nonsmoothed bar chart of channel activity over time
 
 
 ## Installing
