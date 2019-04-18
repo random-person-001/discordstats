@@ -57,7 +57,7 @@ def interpolate(x, y, steps=5):
 
 
 def postplot_styling(chans):
-    """Configure the graph style, before calling any plotting functions"""
+    """Configure the graph style, after calling any plotting functions"""
     # legends and tweaks
     legend = plt.legend(loc='upper left', prop={'size': 13}, handlelength=0)
     # set legend labels to the right color
@@ -73,7 +73,7 @@ def postplot_styling(chans):
 
 
 def preplot_styling(ctx, guild_id):
-    """Configure the graph style (like the legend), after calling the plot functions"""
+    """Configure the graph style (like the legend), before calling the plot functions"""
     # custom binning, rather than using the (slow) default histogram function and hiding it
     chans = ctx.bot.mydatacache[guild_id][1]
     bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
@@ -95,8 +95,8 @@ async def get_guild_id(ctx, guild_id):
         return ctx.guild.id
     if ctx.bot.get_guild(guild_id) is not None:
         return guild_id
-    await ctx.send("Oops that didn't look like the ID of a guild I'm in."
-                   " Try just the command without anything after")
+    await ctx.send("Oops that didn't look like the ID of a guild I'm in. "
+                   "Try just the command without anything after")
     return None
 
 
@@ -144,7 +144,7 @@ class Data(commands.Cog):
             sync_db(ctx.bot)
             await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
         else:
-            await ctx.send('That\'s already included no need to change :thumbs_up:')
+            await ctx.send('That\'s already included; no need to change :thumbs_up:')
 
     @commands.command()
     async def get_data(self, ctx, guild_id: int = None):
@@ -157,7 +157,12 @@ class Data(commands.Cog):
         if not guild_id:
             return
         print('populating cache...')
-        await ctx.message.add_reaction(ctx.bot.config['loadingemoji'])
+        load_msg = None
+        try:
+            await ctx.message.add_reaction(ctx.bot.config['loadingemoji'])
+        except discord.errors.Forbidden:  # if we don't have react perms, send a message instead
+            load_msg = await ctx.send('<' + ctx.bot.config['loadingemoji'] + '>')
+
         now = datetime.datetime.now()
         begin = now - datetime.timedelta(days=30)
         # cache is a list of Channel objects, as defined above
@@ -181,7 +186,10 @@ class Data(commands.Cog):
         # pprint(self.cache)
         ctx.bot.mydatacache[guild_id] = (begin, cache)
         print("done")
-        await ctx.message.remove_reaction(ctx.bot.config['loadingemoji'], ctx.me)
+        if load_msg:
+            await load_msg.delete()
+        else:
+            await ctx.message.remove_reaction(ctx.bot.config['loadingemoji'], ctx.me)
 
     @commands.command()
     async def clear(self, ctx, guild_id: int = None):
