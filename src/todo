@@ -14,13 +14,15 @@ Done
 [X] reactions to commands for feedback
 [X] ability to exclude channels
 [X] bot-only storage file
+[X] legend color codes
+[X] general ui tweaks
+
 
 Next
-[ ] legend color codes
-[ ] general ui tweaks
-[ ] clearer color scheme?
+[ ] command for nonsmoothed bar graph
 
-Much later
+
+later
 [ ] redo cache
 [ ] own bot user?
 [ ] moar, different stats

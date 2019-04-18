@@ -32,15 +32,74 @@ def get_max(chans):
 
 def sync_db(bot):
     """Write out the current state of the bot db to a persistent file"""
-    with open("db.toml", "w") as f:
-        f.write("# This file was automatically generated and will be overwritten when settings are updated\n")
+    with open('db.toml', 'w') as f:
+        f.write('# This file was automatically generated and will be overwritten when settings are updated\n')
         toml.dump(bot.db, f)
+
+
+async def send_plot(ctx):
+    # save image as file-like object and upload as a message attachment
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    disfile = discord.File(buf, filename='channel_activity.png')
+    await ctx.send(file=disfile)
+
+
+def interpolate(x, y, steps=5):
+    """Code I stole from SO:
+    https://stackoverflow.com/questions/8500700/how-to-plot-a-gradient-color-line-in-matplotlib/25941474#25941474"""
+    path = mpath.Path(np.column_stack([x, y]))
+    verts = path.interpolated(steps=steps).vertices
+    x, y = verts[:, 0], verts[:, 1]
+    return x, y
+
+
+def postplot_styling(chans):
+    """Configure the graph style, before calling any plotting functions"""
+    # legends and tweaks
+    legend = plt.legend(loc='upper left', prop={'size': 13}, handlelength=0)
+    # set legend labels to the right color
+    for text, chan in zip(legend.get_texts(), chans):
+        text.set_color(cm.get_cmap(chan.colormap)(.5))
+    # get rid of the (usually colored) dots next to the text entries in the legend
+    for item in legend.legendHandles:
+        item.set_visible(False)
+    # grid layout
+    plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.2)
+    plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.2)
+    plt.tight_layout()
+
+
+def preplot_styling(ctx):
+    """Configure the graph style (like the legend), after calling the plot functions"""
+    # custom binning, rather than using the (slow) default histogram function and hiding it
+    chans = ctx.bot.mydatacache[ctx.bot.config['guildID']]
+    bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24*30.5))  # leave some fudge space
+
+    # Styling
+    fig, ax = plt.subplots()
+    ax.set_ylabel('Messages per hour')
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+    ax.xaxis.set_major_locator(mdates.WeekdayLocator())
+    ax.set_xlim([datetime.datetime.fromtimestamp(bins[0]), datetime.datetime.fromtimestamp(bins[-1])])
+    for pos in ('top', 'bottom', 'left', 'right'):
+        ax.spines[pos].set_visible(False)
+    return chans, bins, fig, ax
 
 
 class Data(commands.Cog):
     """Get stats and data n stuff"""
     def __init__(self, bot):
         self.bot = bot
+        # Graph styling
+        plt.rcParams['legend.frameon'] = False
+        plt.rcParams['figure.figsize'] = [9, 6]
+        plt.rcParams['savefig.facecolor'] = '#2C2F33'
+        plt.rcParams['axes.facecolor'] = '#2C2F33'
+        plt.rcParams['axes.labelcolor'] = '#999999'
+        plt.rcParams['xtick.color'] = '#999999'
+        plt.rcParams['ytick.color'] = '#999999'
 
     @commands.command(aliases=['exclude'])
     async def ignore(self, ctx, channel: discord.TextChannel):
@@ -74,7 +133,7 @@ class Data(commands.Cog):
 
         This takes a while.
         """
-        print("populating cache...")
+        print('populating cache...')
         await ctx.message.add_reaction(ctx.bot.config['loadingemoji'])
         now = datetime.datetime.now()
         begin = now - datetime.timedelta(days=30)
@@ -108,35 +167,15 @@ class Data(commands.Cog):
         ctx.bot.mydatacache = None
         await ctx.send(":ok_hand:")
 
-    @commands.command(aliases=['magic'])
-    async def graph_data(self, ctx):
+    @commands.command(aliases=['magic', 'line'])
+    async def pretty_graph(self, ctx):
         """Create a smooth line graph of messages per hour for popular channels"""
         if not ctx.bot.mydatacache:
-            await ctx.invoke(ctx.bot.get_command("get_data"))
+            await ctx.invoke(ctx.bot.get_command('get_data'))
         else:
-            print("cache is already filled")
+            print('cache is already filled')
 
-        # custom binning, rather than using the (slow) default histogram function and hiding it
-        chans = ctx.bot.mydatacache[ctx.bot.config['guildID']]
-        bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24*30.5))  # leave some fudge space
-
-        # Styling
-        plt.style.use('ggplot')
-        plt.rcParams['legend.frameon'] = False
-        plt.rcParams["figure.figsize"] = [9, 6]
-        plt.rcParams['savefig.facecolor'] = '#2C2F33'
-        plt.rcParams['axes.facecolor'] = '#2C2F33'
-        plt.rcParams['axes.labelcolor'] = '#999999'
-        plt.rcParams['xtick.color'] = '#999999'
-        plt.rcParams['ytick.color'] = '#999999'
-        fig, ax = plt.subplots()
-        ax.set_ylabel('Messages per hour')
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
-        ax.xaxis.set_major_locator(mdates.WeekdayLocator())
-        ax.set_xlim([datetime.datetime.fromtimestamp(bins[0]), datetime.datetime.fromtimestamp(bins[-1])])
-        for pos in ('top', 'bottom', 'left', 'right'):
-            ax.spines[pos].set_visible(False)
-
+        chans, bins, fig, ax = preplot_styling(ctx)
         # first pass through data, to get smoothed values to plot
         for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
             y = self.get_y(chan, bins)
@@ -154,43 +193,41 @@ class Data(commands.Cog):
             x = [datetime.datetime.fromtimestamp(t) for t in x]
             plt.scatter(x, y, label=''+channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
 
-        # legends and tweaks
-        legend = plt.legend(loc='upper left', prop={'size': 13}, handlelength=0)
-        # set legend labels to the right color
-        for text, chan in zip(legend.get_texts(), chans):
-            text.set_color(cm.get_cmap(chan.colormap)(.5))
-        # get rid of the (usually colored) dots next to the text entries in the legend
-        for item in legend.legendHandles:
-            item.set_visible(False)
-        # grid layout
-        plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.2)
-        plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.2)
-        plt.tight_layout()
+        postplot_styling(chans)
+        await send_plot(ctx)
 
-        # save image as file-like object and upload as a message attachment
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        disfile = discord.File(buf, filename='channel_activity.png')
-        await ctx.send(file=disfile)
+    @commands.command(aliases=['bar'])
+    async def rawer_graph(self, ctx):
+        """Create a bar chart of messages per hour for popular channels"""
+        if not ctx.bot.mydatacache:
+            await ctx.invoke(ctx.bot.get_command('get_data'))
+        else:
+            print('cache is already filled')
+
+        chans, bins, fig, ax = preplot_styling(ctx)
+        # first pass through data, to get smoothed values to plot
+        for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
+            y = self.get_y(chan, bins, smoothing=0)
+            chan.y = y
+            chan.colormap = cmap
+        # second pass through data, doing interpolation and actually plotting
+        for channel in chans:
+            # boring conversions.  Prob a better way to do this but whatevs
+            x = [datetime.datetime.fromtimestamp(t) for t in bins]
+            plt.bar(x, channel.y, .1, label=channel.name, alpha=.3, color=cm.get_cmap(channel.colormap)(.5), )
+
+        postplot_styling(chans)
+        await send_plot(ctx)
 
     def get_y(self, channel, bins, smoothing=13):
-        """For data on a channel, return the smoothed, binned y values to graph"""
+        """For data on a channel, return the smoothed, binned y values to be interpolated and graphed"""
         y = np.zeros(len(bins))
         begin = self.bot.mydatacachebegin.timestamp()
         for msgtime in channel.timestamps:
             y[int((msgtime-begin)/3600)] += 1
-        ysmoothed = gaussian_filter1d(y, sigma=smoothing)
-        return ysmoothed
-
-
-def interpolate(x, y, steps=5):
-    """Code I stole from SO:
-    https://stackoverflow.com/questions/8500700/how-to-plot-a-gradient-color-line-in-matplotlib/25941474#25941474"""
-    path = mpath.Path(np.column_stack([x, y]))
-    verts = path.interpolated(steps=steps).vertices
-    x, y = verts[:, 0], verts[:, 1]
-    return x, y
+        if smoothing > 1:
+            return gaussian_filter1d(y, sigma=smoothing)
+        return y
 
 
 def setup(bot):
