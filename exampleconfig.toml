@@ -1,9 +1,9 @@
 
-# the prefix to call bot commands with
-prefix = "%"
-
 # the discord token the bot uses to log in.  You'll need to change this.
 token = "aoeu.id.htns"
+
+# the prefix to call bot commands with
+prefix = "%"
 
 # the emoji to indicate it's searching history for stuff
 # if you want it to be an animated emoji, follow the format "a:emoji_name:emoji_id" (the id might be tricky to get)

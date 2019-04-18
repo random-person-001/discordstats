@@ -20,11 +20,14 @@ Remember to put your prefix (default is %) in front of these!
 
 
 ## Installing
+This uses [pipenv](https://pipenv.readthedocs.io/en/latest/install/) so make sure you have that installed.
+The bot was built for linux, so should work fine there and on macs.  There's a chance that, as ever, making the code run on windows could have some hiccups.
+
 In a terminal, run `git clone https://github.com/random-person-001/discordstats.git && cd discordstats`
 
-You'll need a discord token to get the bot running. Rename `exampleconfig.toml` to `config.toml` and put the token in there.
+You'll need a [discord token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token) to get the bot running. Rename `exampleconfig.toml` to `config.toml` and put the token in there.
 
 Then run
-`pipenv install` and then `pipenv run python src/main.py`
+`pipenv install` and `pipenv run python src/main.py`
 
 Your bot should hopefully be running!  Invite it somewhere to test with the link https://discordapp.com/api/oauth2/authorize?client_id=LONGNUMBER&scope=bot, replacing `LONGNUMBER` with your bot's discord ID.
