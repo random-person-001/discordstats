@@ -176,14 +176,15 @@ class Data(commands.Cog):
                 except discord.errors.Forbidden:
                     pass  # silently ignore channels we don't have perms to read
                 else:
-                    cache.append(Channel(channel.name, data))
+                    if len(data) > 0:
+                        cache.append(Channel(channel.name, data))
         # sort by most total messages first
         cache = sorted(cache, key=lambda c: len(c.timestamps), reverse=True)
         # discard channels with little activity (also we only have so many colormaps)
         colormap_count = len(ctx.bot.config['colormaps'])
         if len(cache) > colormap_count:
             cache = cache[:colormap_count]
-        # pprint(self.cache)
+
         ctx.bot.mydatacache[guild_id] = (begin, cache)
         print("done")
         if load_msg:
