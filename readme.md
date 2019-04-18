@@ -5,7 +5,11 @@ Built with python 3.7 and discord.py, using matplotlib.
 
 Note that in its current implementation, the graphing occurs in the main bot thread.  This is blocking, and is bad, and the bot will not respond while it occurs.  Eventually I may improve that.
 
-![example output](https://i.imgur.com/6xwWrom.png)
+![example output for line command](https://cdn.discordapp.com/attachments/500896262351093761/568268930964127784/channel_activity.png)
+
+![example output for line command](https://cdn.discordapp.com/attachments/500896262351093761/568283419323138068/channel_activity.png)
+
+![example output for bar command](https://media.discordapp.net/attachments/500896262351093761/568284315167883286/channel_activity.png)
 
 ## Commands
 Remember to put your prefix (default is %) in front of these!
