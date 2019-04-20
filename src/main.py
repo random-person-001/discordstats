@@ -64,6 +64,34 @@ async def murder(ctx):
 
 @commands.cooldown(rate=7, per=30)
 @bot.command(hidden=True)
+async def unload(ctx, extension_name: str):
+    """Unloads an extension."""
+    if await bot.is_owner(ctx.message.author):
+        bot.unload_extension(extension_name)
+        await ctx.send("{} unloaded.".format(extension_name))
+    else:
+        await ctx.send(
+            "This is what you call sarcasm, isn't it? Cuz I'm a free bot and do what I want, not what you tell me to.")
+
+
+@commands.cooldown(rate=7, per=30)
+@bot.command(hidden=True)
+async def load(ctx, extension_name: str):
+    """Loads an extension."""
+    if await bot.is_owner(ctx.message.author):
+        try:
+            bot.load_extension(extension_name)
+        except (AttributeError, ImportError) as err:
+            await ctx.send("```py\n{}: {}\n```".format(type(err).__name__, str(err)))
+            return
+        await ctx.send("{} loaded.".format(extension_name))
+    else:
+        await ctx.send(
+            "This is what you call sarcasm, isn't it? Cuz I'm a free bot and do what I want, not what you tell me to.")
+
+
+@commands.cooldown(rate=7, per=30)
+@bot.command(hidden=True)
 async def reload(ctx, extension_name: str):
     """Unloads and then reloads an extension."""
     if await bot.is_owner(ctx.message.author):
