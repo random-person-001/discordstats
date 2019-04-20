@@ -31,6 +31,26 @@ def get_max(chans):
     return max_y
 
 
+def get_min(chans):
+    """Fetches the global minimum of a list of channels"""
+    # since all our data is timestamps is the past,
+    # taking the timestamp of now will be greater than any values we examine
+    min_y = datetime.datetime.now().timestamp()
+    for channel in chans:
+        min_y = min(min_y, min(channel.y))
+    return min_y
+
+
+class Pin:
+    pass
+class Yakki:
+    pass
+
+
+class MiniPin(Pin, Yakki):
+    def __init__(self, color):
+        self.color = color
+
 def sync_db(bot):
     """Write out the current state of the bot db to a persistent file"""
     with open('db.toml', 'w') as f:
@@ -38,13 +58,12 @@ def sync_db(bot):
         toml.dump(bot.db, f)
 
 
-async def send_plot(ctx):
-    # save image as file-like object and upload as a message attachment
+def plot_as_attachment():
+    """save image as file-like object and return it as an object ready to be sent in the chat"""
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
-    disfile = discord.File(buf, filename='channel_activity.png')
-    await ctx.send(file=disfile)
+    return discord.File(buf, filename='channel_activity.png')
 
 
 def interpolate(x, y, steps=5):
@@ -74,19 +93,18 @@ def postplot_styling(chans):
 
 def preplot_styling(ctx, guild_id):
     """Configure the graph style (like the legend), before calling the plot functions"""
-    # custom binning, rather than using the (slow) default histogram function and hiding it
     chans = ctx.bot.mydatacache[guild_id][1]
-    bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
 
     # Styling
     fig, ax = plt.subplots()
     ax.set_ylabel('Messages per hour')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
     ax.xaxis.set_major_locator(mdates.WeekdayLocator())
-    ax.set_xlim([datetime.datetime.fromtimestamp(bins[0]), datetime.datetime.fromtimestamp(bins[-1])])
+    ax.set_xlim([datetime.datetime.fromtimestamp(min(chans[0].timestamps)),
+                 datetime.datetime.fromtimestamp(max(chans[0].timestamps))])
     for pos in ('top', 'bottom', 'left', 'right'):
         ax.spines[pos].set_visible(False)
-    return chans, bins, fig, ax
+    return chans, fig, ax
 
 
 async def get_guild_id(ctx, guild_id):
@@ -214,7 +232,8 @@ class Data(commands.Cog):
         else:
             print('cache is already filled')
 
-        chans, bins, fig, ax = preplot_styling(ctx, guild_id)
+        chans, fig, ax = preplot_styling(ctx, guild_id)
+        bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
         # first pass through data, to get smoothed values to plot
         for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
             y = self.get_y(chan, bins, guild_id)
@@ -233,7 +252,7 @@ class Data(commands.Cog):
             plt.scatter(x, y, label=channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
 
         postplot_styling(chans)
-        await send_plot(ctx)
+        await ctx.send(file=plot_as_attachment())
 
     @commands.command(aliases=['bar'])
     async def rawer_graph(self, ctx, guild_id: int = None):
@@ -246,7 +265,8 @@ class Data(commands.Cog):
         else:
             print('cache is already filled')
 
-        chans, bins, fig, ax = preplot_styling(ctx, guild_id)
+        chans, fig, ax = preplot_styling(ctx, guild_id)
+        bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
         # first pass through data, to get smoothed values to plot
         for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
             y = self.get_y(chan, bins, guild_id, smoothing=0)
@@ -259,14 +279,14 @@ class Data(commands.Cog):
             plt.bar(x, channel.y, .1, label=channel.name, alpha=.3, color=cm.get_cmap(channel.colormap)(.5), )
 
         postplot_styling(chans)
-        await send_plot(ctx)
+        await ctx.send(file=plot_as_attachment())
 
     def get_y(self, channel, bins, guild_id, smoothing=13):
         """For data on a channel, return the smoothed, binned y values to be interpolated and graphed"""
         y = np.zeros(len(bins))
         begin = self.bot.mydatacache[guild_id][0].timestamp()
         for msg_time in channel.timestamps:
-            y[int((msg_time - begin) / 3600)] += 1
+            y[int((msg_time - begin) / 3600)] += 1  # change me
         if smoothing > 1:
             return gaussian_filter1d(y, sigma=smoothing)
         return y
