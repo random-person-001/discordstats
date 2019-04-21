@@ -95,8 +95,11 @@ async def load(ctx, extension_name: str):
 async def reload(ctx, extension_name: str):
     """Unloads and then reloads an extension."""
     if await bot.is_owner(ctx.message.author):
-        bot.unload_extension(extension_name)
-        await ctx.send("{} unloaded.".format(extension_name))
+        try:
+            bot.unload_extension(extension_name)
+            await ctx.send("{} unloaded.".format(extension_name))
+        except commands.errors.CommandInvokeError:
+            pass
         try:
             bot.load_extension(extension_name)
         except (AttributeError, ImportError) as err:
