@@ -15,7 +15,7 @@ class ReactionListener(commands.Cog):
         self.bot = bot
         # dict of id of message reacted to, pointing towards (time of last reaction, reaction logging message, count)
         self.log_msgs = dict()
-        self.max_age = 3  # days
+        self.max_age = bot.db['REACTION']['max_age']  # days
 
     def cleanup(self):
         """keep self.log_msgs small"""
@@ -31,13 +31,13 @@ class ReactionListener(commands.Cog):
     async def on_raw_reaction_add(self, event):
         self.cleanup()  # this should be called every so often
 
-        # Logging channels: a dict of server ids pointing to log channel ids
-        log_channels = {325354209673216010: 325354209673216010, 391743485616717824: 568975675252408330}
+        # Logging channels: a dict of str(server ids) pointing to log channel ids
+        log_channels = self.bot.db['REACTION']['log_channels']
         # only concern ourselves with reactions to ancient posts
         if datetime.utcnow() - discord.utils.snowflake_time(event.message_id) > timedelta(days=self.max_age):
             link = f'https://discordapp.com/channels/{event.guild_id}/{event.channel_id}/{event.message_id}'
-            if event.guild_id in log_channels:
-                log_chan = self.bot.get_channel(log_channels[event.guild_id])
+            if str(event.guild_id) in log_channels:
+                log_chan = self.bot.get_channel(log_channels[str(event.guild_id)])
 
                 # this is the first log for them reacting on this message
                 if event.message_id not in self.log_msgs:

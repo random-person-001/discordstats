@@ -1,3 +1,7 @@
+import json
+import os
+import random
+
 import discord
 import toml
 from discord.ext import commands
@@ -6,19 +10,41 @@ from discord.ext import commands
 def write_db():
     """Write out a db file with default settings"""
     print('Didn\'t find a db file, so creating a new one with default settings')
-    data = {
+    data = {'ACTIVITY': {
         'excluded_channels': []
+    }, 'CHANNEL_REARRANGING': {
+        'log_channels': {
+            325354209673216010: 325354209673216010,
+            391743485616717824: 568975675252408330
+        }
+    }, 'ALARM': {
+        'err_channels': {
+            325354209673216010: 325354209673216010,
+            391743485616717824: 568975675252408330
+        }
+    }, 'APOD':  {
+        'channel': {
+            325354209673216010: 325354209673216010,
+            391743485616717824: 395649976048287758
+        }
+    }, 'REACTION': {
+        'max_age': 3,  # days
+        'log_channels': {
+            325354209673216010: 325354209673216010,
+            391743485616717824: 568975675252408330
+        }
     }
-    with open("db.toml", "w") as f:
-        f.write("# This file was automatically generated and will be overwritten when settings are updated\n")
-        toml.dump(data, f)
+    }
+    with open("db.json", "w") as f:
+        json.dump(data, f)
     return data
 
 
 def get_db():
-    """Get the persistent settings for the bot. The bot owner shouldn't need to worry about this"""
+    """Get the persistent settings for the bot. You shouldn't need to worry about this"""
     try:
-        return toml.load("db.toml")
+        with open('db.json') as f:
+            return json.load(f)
     except:
         return write_db()
 
@@ -39,16 +65,24 @@ def prep():
               "(more help can be found in the file `readme.md`)")
         return
     else:
-        for key in ("token", "prefix", "extensions"):
+        if not os.path.exists('logs'):  # make sure we have a place to log errors if we encounter them
+            os.mkdir('logs')
+        for key in ('token', 'prefix', 'extensions', 'loadingemoji', 'colormaps'):
             if key not in config:
-                print("Oof, looks like you're missing the entry for `{}` in the config.toml file. "
-                      "Perhaps reference `exampleconfig.toml`?".format(key))
+                print('Oof, looks like you\'re missing the entry for `{}` in the config.toml file. '
+                      'Perhaps reference `exampleconfig.toml`?'.format(key))
                 return
         return config
 
 
 config = prep()
 bot = commands.Bot(command_prefix=config['prefix'])
+disses = ('Eat moon dirt, kid, I ain\'t talkin to you',
+          'Nah fam go do something useful with your life instead of tryin to break someone else\'s bot.',
+          'Frick off kid, I do what I want',
+          'lol imagine me actually listening to you, of all people'
+          'Puny human, thinking they\'re in charge of me. Oh they\'ll learn.'
+          )
 
 
 @commands.cooldown(rate=1, per=7)
@@ -56,10 +90,10 @@ bot = commands.Bot(command_prefix=config['prefix'])
 async def murder(ctx):
     """Make bot logout."""
     if await bot.is_owner(ctx.message.author):
-        await ctx.send("Thus, with a kiss, I die")
+        await ctx.send('Thus, with a kiss, I die')
         await bot.logout()
     else:
-        await ctx.send("Eat moon dirt, kid, I ain't talkin to you")
+        await ctx.send(random.choice(disses))
 
 
 @commands.cooldown(rate=7, per=30)
@@ -68,10 +102,9 @@ async def unload(ctx, extension_name: str):
     """Unloads an extension."""
     if await bot.is_owner(ctx.message.author):
         bot.unload_extension(extension_name)
-        await ctx.send("{} unloaded.".format(extension_name))
+        await ctx.send('{} unloaded.'.format(extension_name))
     else:
-        await ctx.send(
-            "This is what you call sarcasm, isn't it? Cuz I'm a free bot and do what I want, not what you tell me to.")
+        await ctx.send(random.choice(disses))
 
 
 @commands.cooldown(rate=7, per=30)
@@ -82,12 +115,11 @@ async def load(ctx, extension_name: str):
         try:
             bot.load_extension(extension_name)
         except (AttributeError, ImportError) as err:
-            await ctx.send("```py\n{}: {}\n```".format(type(err).__name__, str(err)))
+            await ctx.send('```py\n{}: {}\n```'.format(type(err).__name__, str(err)))
             return
-        await ctx.send("{} loaded.".format(extension_name))
+        await ctx.send('{} loaded.'.format(extension_name))
     else:
-        await ctx.send(
-            "This is what you call sarcasm, isn't it? Cuz I'm a free bot and do what I want, not what you tell me to.")
+        await ctx.send(random.choice(disses))
 
 
 @commands.cooldown(rate=7, per=30)
@@ -97,21 +129,20 @@ async def reload(ctx, extension_name: str):
     if await bot.is_owner(ctx.message.author):
         try:
             bot.unload_extension(extension_name)
-            await ctx.send("{} unloaded.".format(extension_name))
+            await ctx.send('{} unloaded.'.format(extension_name))
         except commands.errors.CommandInvokeError:
             pass
         try:
             bot.load_extension(extension_name)
         except (AttributeError, ImportError) as err:
-            await ctx.send("```py\n{}: {}\n```".format(type(err).__name__, str(err)))
+            await ctx.send('```py\n{}: {}\n```'.format(type(err).__name__, str(err)))
             return
-        await ctx.send("{} loaded.".format(extension_name))
+        await ctx.send('{} loaded.'.format(extension_name))
     else:
-        await ctx.send(
-            "This is what you call sarcasm, isn't it? Cuz I'm a free bot and do what I want, not what you tell me to.")
+        await ctx.send(random.choice(disses))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     if config:
         bot.config = config
         bot.db = get_db()  # load the db file. User doesn't have to touch this
@@ -123,4 +154,3 @@ if __name__ == "__main__":
                 exc = '{}: {}'.format(type(e).__name__, e)
                 print('Failed to load extension {}\n{}'.format(extension, exc))
         bot.run(bot.config['token'])
-
