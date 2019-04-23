@@ -1,5 +1,7 @@
 # Discord Data bot
-Graph stats about channel activity
+Many random features.
+
+Probably the nicest is graphing stats about channel activity, but it also bugs you when channels are dragged out of order, and when people try to write secret messages as reactions to ancient messages.  And an APOD thing too.
 
 Built with python 3.7 and discord.py, using matplotlib.
 
@@ -10,14 +12,6 @@ Note that in its current implementation, the graphing occurs in the main bot thr
 ![example output for line command](https://cdn.discordapp.com/attachments/500896262351093761/568283419323138068/channel_activity.png)
 
 ![example output for bar command](https://media.discordapp.net/attachments/500896262351093761/568284315167883286/channel_activity.png)
-
-## Commands
-Remember to put your prefix (default is %) in front of these!
-
-`line` - Show a pretty, smooth line graph of channel activity over time
-
-`bar` - show a nonsmoothed bar chart of channel activity over time
-
 
 ## Installing
 This uses [pipenv](https://pipenv.readthedocs.io/en/latest/install/) so make sure you have that installed.
