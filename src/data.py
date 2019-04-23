@@ -41,16 +41,6 @@ def get_min(chans):
     return min_y
 
 
-class Pin:
-    pass
-class Yakki:
-    pass
-
-
-class MiniPin(Pin, Yakki):
-    def __init__(self, color):
-        self.color = color
-
 def sync_db(bot):
     """Write out the current state of the bot db to a persistent file"""
     with open('db.toml', 'w') as f:
@@ -162,7 +152,7 @@ class Data(commands.Cog):
             sync_db(ctx.bot)
             await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
         else:
-            await ctx.send('That\'s already included; no need to change :thumbs_up:')
+            await ctx.send('That\'s already included; no need to change :thumbsup:')
 
     @commands.command()
     async def get_data(self, ctx, guild_id: int = None):
