@@ -17,3 +17,6 @@ extensions = ["data"]
 # for more info and options, see https://matplotlib.org/tutorials/colors/colormaps.html
 # the number of colormaps specified here is how many channels will be graphed
 colormaps = ["Reds_r", "YlOrBr_r", "Greens_r", "Blues_r", "Purples_r", "cividis"]
+
+# NASA API token, for APOD stuff if you want
+nasatoken = ""
