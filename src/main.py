@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import subprocess
 
 import discord
 import toml
@@ -138,6 +139,17 @@ async def reload(ctx, extension_name: str):
             await ctx.send('```py\n{}: {}\n```'.format(type(err).__name__, str(err)))
             return
         await ctx.send('{} loaded.'.format(extension_name))
+    else:
+        await ctx.send(random.choice(disses))
+
+
+@bot.command()
+@commands.cooldown(rate=3, per=30)
+async def pull(ctx):
+    """Perform git pull"""
+    if await bot.is_owner(ctx.message.author):
+        result = subprocess.run(['git', 'pull', 'origin', 'master'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        await ctx.send('```yaml\n {}```'.format(result.stdout.decode('utf-8')))
     else:
         await ctx.send(random.choice(disses))
 
