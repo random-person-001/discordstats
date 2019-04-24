@@ -136,7 +136,7 @@ class Data(commands.Cog):
 
         This will clear any caches that the bot has for this guild.
         """
-        ctx.bot.db['excluded_channels'].append(channel.id)
+        ctx.bot.db['ACTIVITY']['excluded_channels'].append(channel.id)
         sync_db(ctx.bot)
         await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
 
@@ -147,8 +147,8 @@ class Data(commands.Cog):
 
         This will clear any caches that the bot has for this guild.
         """
-        if channel.id in ctx.bot.db['excluded_channels']:
-            ctx.bot.db['excluded_channels'].remove(channel.id)
+        if channel.id in ctx.bot.db['ACTIVITY']['excluded_channels']:
+            ctx.bot.db['ACTIVITY']['excluded_channels'].remove(channel.id)
             sync_db(ctx.bot)
             await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
         else:
@@ -176,7 +176,7 @@ class Data(commands.Cog):
         # cache is a list of Channel objects, as defined above
         cache = []
         for channel in ctx.bot.get_guild(guild_id).text_channels:
-            if channel.id not in ctx.bot.db['excluded_channels']:
+            if channel.id not in ctx.bot.db['ACTIVITY']['excluded_channels']:
                 data = []
                 try:
                     async for msg in channel.history(limit=None, after=begin):
