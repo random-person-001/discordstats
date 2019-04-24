@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 from discord.ext import commands
 import json
@@ -6,12 +8,18 @@ import async_timeout
 import time
 
 
-async def fetch_url(url):
-    """Async url fetch"""
+async def fetch_url(url, retries=10):
+    """Async url fetch.  By default, it will retry up to 10 times, with a geometric wait"""
+    if retries is 0:
+        raise TimeoutError(f'Failed to fetch the url {url} too many times')
     async with aiohttp.ClientSession() as session:
         with async_timeout.timeout(10):
-            async with session.get(url) as response:
-                return await response.text()
+            try:
+                async with session.get(url) as response:
+                    return await response.text()
+            except aiohttp.ClientError:
+                await asyncio.sleep(125/retries**3)  # geometric delay for retries
+                return fetch_url(url, retries-1)
 
 
 class Apod(commands.Cog):
@@ -43,14 +51,13 @@ class Apod(commands.Cog):
         if today != self.last_checked:
             self.last_checked = today
             apod_json = await fetch_url(f'https://api.nasa.gov/planetary/apod?date={today}&api_key={self.nasa_key}')
-            apod_json = json.loads(apod_json)
-            self.last_json = apod_json
+            self.last_json = json.loads(apod_json)
             self.truncate_explanation(time.strftime('%y%m%d'))
-            if apod_json['media_type'] == 'image':
-                if 'hdurl' in apod_json:
-                    self.last_url = apod_json['hdurl']
+            if self.last_json['media_type'] == 'image':
+                if 'hdurl' in self.last_json:
+                    self.last_url = self.last_json['hdurl']
                 else:
-                    self.last_url = apod_json['url']
+                    self.last_url = self.last_json['url']
             else:
                 self.last_url = None
 
@@ -72,10 +79,9 @@ class Apod(commands.Cog):
             embed.set_image(url=self.last_url)
         else:
             embed.add_field(name='Link', value=self.last_json['url'])
-        # most icons on nasa's main site are svg, which are unsupported by discord
+
         nasa_raster_icon = 'http://www.laboiteverte.fr/wp-content/uploads/2015/09/nasa-logo.png'
-        embed.set_footer(text=self.last_checked, icon_url=nasa_raster_icon)
-        return embed
+        return embed.set_footer(text=self.last_checked, icon_url=nasa_raster_icon)
 
     @commands.command()
     async def apod(self, ctx):
