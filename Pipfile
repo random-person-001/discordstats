@@ -11,6 +11,7 @@ toml = "*"
 numpy = "*"
 matplotlib = "*"
 scipy = "*"
+rethinkdb = "*"
 
 [requires]
 python_version = "3.7"
