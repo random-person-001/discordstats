@@ -66,7 +66,8 @@ class Apod(commands.Cog):
         apod_url = 'https://apod.nasa.gov/'
         await self.update_image()
         if self.last_json is None:
-            return discord.Embed(title='Error fetching APOD', color=0x992222, url=apod_url)
+            return discord.Embed(title='Error fetching APOD', color=0x992222, url=apod_url,
+                                 description='Maybe try again in a bit?')
         if self.last_json['service_version'] != 'v1':
             return discord.Embed(title='Looks like the APOD format has changed to an unsupported version',
                                  color=0x5b000a, url=apod_url)
