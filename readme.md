@@ -1,7 +1,7 @@
 # Discord Data bot
 Many random features.
 
-Probably the nicest is graphing stats about channel activity, but it also bugs you when channels are dragged out of order, and when people try to write secret messages as reactions to ancient messages.  And an APOD thing too.
+Probably the nicest is graphing stats about channel activity, but it also bugs you when channels are dragged out of order, and when people try to write secret messages as reactions to ancient messages.  And a NASA APOD thing too.
 
 Built with python 3.7 and discord.py, using matplotlib.
 
