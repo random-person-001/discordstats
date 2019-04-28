@@ -41,9 +41,16 @@ class Apod(commands.Cog):
         Truncate the explanation to fit, and add a [more] to the end with a link to that day's apod page
         'date' is an exactly six digit string of year, month, day format.
         """
-        if 1990 > len(self.last_json['explanation']):
-            self.last_json['explanation'] = self.last_json['explanation'][:1990] + '...'
-        self.last_json['explanation'] += f'[[more]](https://apod.nasa.gov/apod/ap{date}.html)'
+        s = self.last_json['explanation']
+        # handle obnoxious addendums like on 2019-04-28
+        if 'click here to see a random' in s.lower():
+            i = s.index('here to see a random')
+            s = s[:s[:i].rindex('.')] + '.'
+        # don't go over discord's embed field length
+        if 1993 > len(s):
+            s = s[:1990] + '...'
+        s += f'[[more]](https://apod.nasa.gov/apod/ap{date}.html)'
+        self.last_json['explanation'] = s
 
     async def update_image(self):
         """Update internal state to make sure we have the latest and greatest data"""
@@ -60,6 +67,9 @@ class Apod(commands.Cog):
                     self.last_url = self.last_json['url']
             else:
                 self.last_url = None
+                # kinda handle obnoxious unclickable urls (like returned on 2019-04-28)
+                if self.last_json['url'].startswith('//'):
+                    self.last_json['url'] = 'https:' + self.last_json['url']
 
     async def get_embed(self):
         """Build the discord.Embed object to send to the chat"""
