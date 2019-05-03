@@ -19,11 +19,14 @@ Done
 [X] redo cache
 [X] command for nonsmoothed bar graph
 
+Near Future
+[ ] move db.json into sqlite
+[ ] back-harvest a bunch of messages to put into history db
+[ ] migrate graph to read db
 
 Next
 [ ] fix x axis scaling/label issues
 [ ] increase bar graph bin size
-
 
 later
 [ ] moar, different stats

@@ -1,6 +1,7 @@
 import datetime
 import toml
 import io
+import os
 import sqlite3
 
 import discord
@@ -116,6 +117,11 @@ Guild id : (datetime object of start of era covered, [list of unix timestamps of
 """
 
 
+def now_str():
+    """Get a filename-appropriate now-ish string"""
+    return datetime.datetime.utcnow().isoformat().replace(':', '_').replace('-', '_')
+
+
 class Data(commands.Cog):
     """Get stats and data n stuff"""
 
@@ -161,50 +167,27 @@ class Data(commands.Cog):
             await ctx.send('That\'s already included; no need to change :thumbsup:')
 
     @commands.command()
-    async def get_data(self, ctx, guild_id: int = None):
+    @commands.is_owner()
+    async def grab_old_data(self, ctx, guild_id: int = None):
         """
-        Get the timestamps of all messages by channel, going back a month
+        Get a lot of data, and save to db
 
         This takes a while.
         """
         guild_id = await get_guild_id(ctx, guild_id)
         if not guild_id:
             return
-        print('populating cache...')
-        load_msg = None
-        try:
-            await ctx.message.add_reaction(ctx.bot.config['loadingemoji'])
-        except discord.errors.Forbidden:  # if we don't have react perms, send a message instead
-            load_msg = await ctx.send('<' + ctx.bot.config['loadingemoji'] + '>')
+        print('populating db...')
 
-        now = datetime.datetime.now()
-        begin = now - datetime.timedelta(days=30)
-        # cache is a list of Channel objects, as defined above
-        cache = []
+        now = datetime.datetime.utcnow()
+        begin = now - datetime.timedelta(days=60)
         for channel in ctx.bot.get_guild(guild_id).text_channels:
-            if channel.id not in ctx.bot.db['ACTIVITY']['excluded_channels']:
-                data = []
-                try:
-                    async for msg in channel.history(limit=None, after=begin):
-                        data.append(discord.utils.snowflake_time(msg.id).timestamp())
-                except discord.errors.Forbidden:
-                    pass  # silently ignore channels we don't have perms to read
-                else:
-                    if len(data) > 0:
-                        cache.append(Channel(channel.name, data))
-        # sort by most total messages first
-        cache = sorted(cache, key=lambda c: len(c.timestamps), reverse=True)
-        # discard channels with little activity (also we only have so many colormaps)
-        colormap_count = len(ctx.bot.config['colormaps'])
-        if len(cache) > colormap_count:
-            cache = cache[:colormap_count]
-
-        ctx.bot.mydatacache[guild_id] = (begin, cache)
-        print("done")
-        if load_msg:
-            await load_msg.delete()
-        else:
-            await ctx.message.remove_reaction(ctx.bot.config['loadingemoji'], ctx.me)
+            try:
+                async for msg in channel.history(limit=None, after=begin, oldest_first=True):
+                    await self.on_message(msg)
+            except discord.errors.Forbidden:
+                pass  # silently ignore channels we don't have perms to read
+        await ctx.send("done")
 
     @commands.command()
     async def clear(self, ctx, guild_id: int = None):
@@ -293,24 +276,49 @@ class Data(commands.Cog):
         """Run an sql query"""
         c = self.conn.cursor()
         try:
-            response = c.execute(query)
+            response = c.execute(query).fetchall()
         except Exception as e:
             await ctx.send(f'Oh no!  An error! `{e}`')
         else:
-            s = "\n".join(str(t) for t in response.fetchall())
-            await ctx.send(f'```json\n{s}```')
+            if len(response) == 0:
+                await ctx.send('```toml\n[nothing returned]```')
+                self.conn.commit()
+            else:
+                s = "\n".join(str(t) for t in response)
+                await ctx.send(f'```json\n{s}```')
+
+    @commands.is_owner()
+    @commands.command(hidden=True)
+    async def drop_tables(self, ctx):
+        """Drops all tables in the db. Makes a backup copy of the db first."""
+        # make backup copy of db
+        os.system('cp channel_history.db channel_history.db.before_purge_' + now_str())
+        # get all table names
+        c = self.conn.cursor()
+        c.execute("""select name from sqlite_master where type = 'table';""")
+        tables = c.fetchall()
+        # delete each table individually
+        for table in tables:
+            cmd = f"drop table '{table[0]}'"
+            print(cmd)
+            c.execute(cmd)
+        self.conn.commit()
+        await ctx.send("(╯°□°）╯︵ ┻━┻")
 
     @commands.command(hidden=True)
-    async def bins(self, ctx):
+    async def bins(self, ctx, *, args=None):
         """Print out all the bins, for debugging"""
         s = "\n".join('{}: {}'.format(k, self.bins[k]) for k in self.bins)
         await ctx.send(f'```json\n{s}```')
+        if args is not None and 'purge' in args:
+            self.bins = dict()
+            await ctx.send("Purged.")
 
     @commands.Cog.listener()
     async def on_message(self, msg):
         """Keep track of message count as messages come, by channel"""
-        # get the timestamp of the beginning of this hour
-        d = datetime.datetime.utcnow()
+        # get the timestamp of the beginning of the hour the message was sent in
+        d = discord.utils.snowflake_time(msg.id)
         last_hour = d - datetime.timedelta(minutes=d.minute, seconds=d.second, microseconds=d.microsecond)
         timestamp = int(last_hour.timestamp())
 
