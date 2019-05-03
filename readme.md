@@ -15,7 +15,7 @@ Note that in its current implementation, the graphing occurs in the main bot thr
 
 ## Installing
 This uses [pipenv](https://pipenv.readthedocs.io/en/latest/install/) so make sure you have that installed.
-The bot was built for linux, so should work fine there and on macs.  There's a chance that, as ever, making the code run on windows could have some hiccups.
+The bot was built for linux, so should work fine there and on macs.  There's a chance that, as ever, making the code run on windows could have some hiccups. You should also make sure you have SQLite 3 on your system.
 
 In a terminal, run `git clone https://github.com/random-person-001/discordstats.git && cd discordstats`
 
