@@ -1,6 +1,7 @@
 import datetime
 import toml
 import io
+import sqlite3
 
 import discord
 import numpy as np
@@ -128,6 +129,11 @@ class Data(commands.Cog):
         plt.rcParams['axes.labelcolor'] = '#999999'
         plt.rcParams['xtick.color'] = '#999999'
         plt.rcParams['ytick.color'] = '#999999'
+        # message counting
+        self.conn = sqlite3.connect('channel_history.db')
+        self.last_dump_timestamp = -1
+        # message count cache
+        self.bins = dict()
 
     @commands.command(aliases=['exclude'])
     async def ignore(self, ctx, channel: discord.TextChannel):
@@ -280,6 +286,54 @@ class Data(commands.Cog):
         if smoothing > 1:
             return gaussian_filter1d(y, sigma=smoothing)
         return y
+
+    @commands.command()
+    @commands.is_owner()
+    async def sql(self, ctx, *, query):
+        """Run an sql query"""
+        c = self.conn.cursor()
+        try:
+            response = c.execute(query)
+        except Exception as e:
+            await ctx.send(f'Oh no!  An error! `{e}`')
+        else:
+            s = "\n".join(str(t) for t in response.fetchall())
+            await ctx.send(f'```json\n{s}```')
+
+    @commands.command(hidden=True)
+    async def bins(self, ctx):
+        """Print out all the bins, for debugging"""
+        s = "\n".join('{}: {}'.format(k, self.bins[k]) for k in self.bins)
+        await ctx.send(f'```json\n{s}```')
+
+    @commands.Cog.listener()
+    async def on_message(self, msg):
+        """Keep track of message count as messages come, by channel"""
+        # get the timestamp of the beginning of this hour
+        d = datetime.datetime.utcnow()
+        last_hour = d - datetime.timedelta(minutes=d.minute, seconds=d.second, microseconds=d.microsecond)
+        timestamp = int(last_hour.timestamp())
+
+        # if message is in a new hour than recently recorded, dump all contents of self.bins into db and clear it
+        if timestamp != self.last_dump_timestamp:
+            print(f'dumping!  timestamp is {timestamp}')
+            self.last_dump_timestamp = timestamp
+            c = self.conn.cursor()
+            for chan_id in self.bins:
+                # make sure table exists
+                c.execute(f'create table if not exists \'{chan_id}\' (timestamp INTEGER, count INTEGER)')
+                # dump latest data into the table
+                c.execute(f'insert into \'{chan_id}\' values (?, ?)', (timestamp, self.bins[chan_id]))
+            # flush memory changes to disk
+            self.conn.commit()
+            # empty our cache thingy
+            self.bins = dict()
+
+        # add to memory bin
+        if not msg.author.bot:
+            if msg.channel.id not in self.bins:
+                self.bins[msg.channel.id] = 0
+            self.bins[msg.channel.id] += 1
 
 
 def setup(bot):
