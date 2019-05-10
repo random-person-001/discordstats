@@ -1,5 +1,7 @@
+import json
 from datetime import datetime
 import traceback
+from typing import List
 
 import asyncpg
 import discord
@@ -17,9 +19,8 @@ def truncate(s: str, length: int):
     s = discord.utils.escape_markdown(s).replace('\\_', '_').replace('\\*', '*')
     emoji_so_far = 0
     for i in range(len(s)):
-        if is_emoji(s[i]):
+        if is_emoji(s[i]) or s[i] == '︵':
             emoji_so_far += 1
-            print(s[i] + 'is emoji')
         # emoji are two characters wide
         if i + emoji_so_far >= length:
             s = s[:i]
@@ -33,11 +34,10 @@ def truncate(s: str, length: int):
 
 def get_channel_widths(res: list):
     """Get a dict of field names : field lengths"""
-    default_widths = {'id': 19, 'author': 19, 'content': 20, 'deleted': 1, 'edited_at': 5, 'embed': 1,
-              'attachments': 1, 'reactions': 1}
+    default_widths = {'id': 19, 'author': 19, 'bot': 1, 'content': 20, 'deleted': 1, 'edited_at': 5, 'embed': 1,
+                      'attachment': 6, 'reactions': 1}
     # if it mostly matches our default data set, return this
     if sum(key in default_widths for key in res[0].keys()) >= len(default_widths)/2:
-        print('sim')
         return default_widths
     # else we gotta guess
     maxes = dict()
@@ -54,9 +54,9 @@ def get_channel_widths(res: list):
 def str_chan_res(res: list):
     """Take the result from a channel and stringify it"""
     if len(res) <= 5:
-        return '\n'.join(discord.utils.escape_markdown(str(r), as_needed=False, ignore_links=False) for r in res)
-    if len(res) > 500:
-        res = res[:250].append(*res[:-250])
+        return '\n'.join(discord.utils.escape_markdown(str(r), as_needed=False) for r in res)
+    if len(res) > 100:
+        res = res[:50].append(*res[:-50])
     # set up buckets
     widths = get_channel_widths(res)
     out = '(╯°□°）╯︵ ┻━┻\n<Fields:'
@@ -76,6 +76,58 @@ def str_chan_res(res: list):
     return out
 
 
+async def reactions_to_json(reactions: List[discord.Reaction]):
+    """Given a list of Reactions to a message, return a suitable json representation of them"""
+    l = []
+    for reaction in reactions:
+        emoj = reaction.emoji  # this will be unicode if standard emoji
+        if reaction.custom_emoji:
+            emoj = ('<a:' if reaction.emoji.animated else '<:') + reaction.emoji.name + ':' + reaction.emoji.id + '>'
+        users = (user.id for user in await reaction.users().flatten())
+        l.append({'emoji': emoj, 'count': reaction.count, 'users': users})
+    return json.dumps(l)
+
+
+def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
+    """Given a previous reaction representation, adjust for a new reaction added and return the new suitable json
+    representation"""
+    # Sample representation of the data structure here:
+    # prev = [{'emoji': '\ud83d\udc40👍', 'count': 2, 'users': [23456, 23456]},
+    #        {'emoji': '<a:trash:234567>', 'count': 3, 'users': [654, 3456, 567]}]
+
+    if event.emoji.is_custom_emoji():
+        emoj = ('<a:' if event.emoji.animated else '<:') + event.emoji.name + ':' + str(event.emoji.id) + '>'
+    else:
+        emoj = event.emoji.name  # this will be unicode
+    is_new_reaction = True
+    if prev:
+        prev = json.loads(prev)
+        for reaction in prev:
+            if reaction['emoji'] == emoj:
+                reaction['count'] += 1
+                reaction['users'].append(event.user_id)
+                is_new_reaction = False
+    else:
+        prev = list()
+    if is_new_reaction:
+        prev.append({'emoji': emoj, 'count': 1, 'users': [event.user_id]})
+    return json.dumps(prev)
+
+
+# todo: make this actually work
+class MyConn(asyncpg.connection.Connection):
+    # encode and decode json as dicts rather than strings
+
+    async def __aenter__(self):
+        print('MyConn is being entered')  # never triggers
+        await self.set_type_codec(
+                'json',
+                encoder=json.dumps,
+                decoder=json.loads,
+                schema='pg_catalog'
+            )
+
+
 class DB(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -88,7 +140,8 @@ class DB(commands.Cog):
         if not self.bot.pool or self.bot.pool._closed:
             self.bot.pool = await asyncpg.create_pool(user=self.bot.config['postgresuser'],
                                                       password=self.bot.config['postgrespwd'],
-                                                      database='discord', host='127.0.0.1', loop=self.bot.loop)
+                                                      database='discord', host='127.0.0.1', loop=self.bot.loop,
+                                                      connection_class=MyConn)
             print('db pool initialized')
         print('db connected!')
 
@@ -101,11 +154,12 @@ class DB(commands.Cog):
                 await conn.execute(f'CREATE TABLE IF NOT EXISTS c{chan.id} (' + '''
                       id int8 PRIMARY KEY,
                       author int8 NOT NULL,
-                      content varchar(2000),
-                      deleted bool NOT NULL default 'f',
+                      bot bool NOT NULL default 'f',
+                      content varchar(2000) NOT NULL,
+                      del bool NOT NULL default 'f',
                       edited_at timestamp DEFAULT NULL,
+                      attachment varchar(500) DEFAULT NULL,
                       embed json DEFAULT NULL,
-                      attachments json DEFAULT NULL,
                       reactions json DEFAULT NULL
                 )
                 ''')
@@ -149,14 +203,40 @@ class DB(commands.Cog):
             await self.create_chan_table(chan)
         await ctx.send('done')
 
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def drop_pg_tables(self, ctx):
+        async with self.bot.pool.acquire() as conn:
+            for chan in self.bot.get_all_channels():
+                if isinstance(chan, discord.TextChannel):  # and chan.permissions_for(self.bot.me).read_messages:
+                    await conn.execute(f'DROP TABLE IF EXISTS c{chan.id}')
+        await ctx.send('done')
+
     @commands.Cog.listener()
     async def on_message(self, msg: discord.message):
-        embeds = None
-        if msg.embeds:
-            if msg.embeds[0].type == 'rich':
-                embeds = msg.embeds[0].to_dict()
         async with self.bot.pool.acquire() as conn:
-            await conn.execute(f'insert into c{msg.channel.id} values ($1, $2, $3)', msg.id, msg.author.id, msg.content)
+            if not msg.content:
+                msg.content = ''
+            embeds = None
+            attachment = None
+
+            if msg.attachments:
+                print(msg.attachments)
+                print(msg.attachments[0].url)
+                attachment = msg.attachments[0].url
+
+            if msg.embeds:
+                if msg.embeds[0].type == 'rich':
+                    embeds = msg.embeds[0].to_dict()
+                await conn.set_type_codec(
+                    'json',
+                    encoder=json.dumps,
+                    decoder=json.loads,
+                    schema='pg_catalog'
+                )
+
+            await conn.execute(f"insert into c{msg.channel.id} values ($1, $2, $3, $4, 'f', NULL, $5, $6)",
+                               msg.id, msg.author.id, msg.author.bot, msg.content, attachment, embeds)
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload):
@@ -170,15 +250,24 @@ class DB(commands.Cog):
             # todo: content update
 
     @commands.Cog.listener()
+    async def on_raw_reaction_add(self, event):
+        print(event)
+        async with self.bot.pool.acquire() as conn:
+            prev = await conn.fetchval(f"select reactions from c{event.channel_id} where id = $1", event.message_id)
+            print(prev)
+            new_val = add_reaction_to_json(event, prev)
+            await conn.execute(f"update c{event.channel_id} set reactions = $1 where id = $2", new_val, event.message_id)
+
+    @commands.Cog.listener()
     async def on_raw_message_delete(self, event):
         async with self.bot.pool.acquire() as conn:
-            await conn.execute(f'update c{event.channel_id} set deleted = t where id = $2', event.message_id)
+            await conn.execute(f"update c{event.channel_id} set del = 't' where id = $1", event.message_id)
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, event):
         async with self.bot.pool.acquire() as conn:
             for msg_id in event.message_ids:
-                await conn.execute(f'update c{event.channel_id} set deleted = t where id = $1', msg_id)
+                await conn.execute(f"update c{event.channel_id} set del = 't' where id = $1", msg_id)
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, chan):
