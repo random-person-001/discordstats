@@ -1,4 +1,6 @@
 import datetime
+from pprint import pprint
+
 import toml
 import io
 import os
@@ -85,18 +87,17 @@ def postplot_styling(chans):
 
 def preplot_styling(ctx, guild_id):
     """Configure the graph style (like the legend), before calling the plot functions"""
-    chans = ctx.bot.mydatacache[guild_id][1]
-
     # Styling
     fig, ax = plt.subplots()
     ax.set_ylabel('Messages per hour')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
     ax.xaxis.set_major_locator(mdates.WeekdayLocator())
-    ax.set_xlim([datetime.datetime.fromtimestamp(min(chans[0].timestamps)),
-                 datetime.datetime.fromtimestamp(max(chans[0].timestamps))])
+    # TODO - set x axis extrema from data
+    #ax.set_xlim([datetime.datetime.fromtimestamp(min(chans[0].timestamps)),
+    #             datetime.datetime.fromtimestamp(max(chans[0].timestamps))])
     for pos in ('top', 'bottom', 'left', 'right'):
         ax.spines[pos].set_visible(False)
-    return chans, fig, ax
+    return fig, ax
 
 
 async def get_guild_id(ctx, guild_id):
@@ -199,6 +200,32 @@ class Data(commands.Cog):
             ctx.bot.mydatacache.pop(guild_id)
         await ctx.send(":ok_hand:")
 
+    @commands.command()
+    async def get_bins(self, ctx, guild_id:int):
+        c = self.conn.cursor()
+        month_ago_timestamp = int((datetime.datetime.utcnow() - datetime.timedelta(days=2)).timestamp())
+        results = []
+        for chan in discord.utils.get(ctx.bot.guilds, id=guild_id).channels:
+            # check if table exists for this chan
+            c.execute("select name from sqlite_master where type = 'table' and name = ?", (chan.id,))
+            if c.fetchone() is not None:
+                c.execute(f"select * from '{chan.id}' where timestamp > ?", (month_ago_timestamp,))
+                r = c.fetchall()
+                if r is not None and len(r) > 0:
+                    results.append((chan.id, r))
+        print(results)
+        # order by sum of all things
+        results = sorted(results, key=lambda s: sum(s[1]))  # fixme
+        print('\n\n\n\nsorted!')
+        print(results)
+
+        # keep only the first 7ish
+        if len(results) > len(ctx.bot.config['colormaps']):
+            results = results[:len(ctx.bot.config['colormaps'])]
+
+        # return
+        return results
+
     @commands.command(aliases=['magic', 'line'])
     async def pretty_graph(self, ctx, guild_id: int = None):
         """Create a smooth line graph of messages per hour for popular channels"""
@@ -206,12 +233,7 @@ class Data(commands.Cog):
         if not guild_id:
             return
 
-        if guild_id not in ctx.bot.mydatacache:
-            await ctx.invoke(ctx.bot.get_command('get_data'), guild_id=guild_id)
-        else:
-            print('cache is already filled')
-
-        chans, fig, ax = preplot_styling(ctx, guild_id)
+        fig, ax = preplot_styling(ctx, guild_id)
         bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
         # first pass through data, to get smoothed values to plot
         for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
@@ -280,7 +302,7 @@ class Data(commands.Cog):
         except Exception as e:
             await ctx.send(f'Oh no!  An error! `{e}`')
         else:
-            if len(response) == 0:
+            if not response:
                 await ctx.send('```toml\n[nothing returned]```')
                 self.conn.commit()
             else:
