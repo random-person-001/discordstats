@@ -37,6 +37,10 @@ def get_channel_widths(res: list):
     default_widths = {'id': 19, 'author': 19, 'bot': 1, 'content': 20, 'deleted': 1, 'edited_at': 5, 'embed': 1,
                       'attachment': 6, 'reactions': 1}
     # if it mostly matches our default data set, return this
+    s = str(res)
+    if len(s) > 2000:
+        s = s[:2000]
+    print(s)
     if sum(key in default_widths for key in res[0].keys()) >= len(default_widths)/2:
         return default_widths
     # else we gotta guess
@@ -56,7 +60,9 @@ def str_chan_res(res: list):
     if len(res) <= 5:
         return '\n'.join(discord.utils.escape_markdown(str(r), as_needed=False) for r in res)
     if len(res) > 100:
-        res = res[:50].append(*res[:-50])
+        res2 = res[:50]
+        res2.extend(res[:-50])
+        res = res2
     # set up buckets
     widths = get_channel_widths(res)
     out = '(╯°□°）╯︵ ┻━┻\n<Fields:'
@@ -150,7 +156,7 @@ class DB(commands.Cog):
 
     async def create_chan_table(self, chan):
         async with self.bot.pool.acquire() as conn:
-            if isinstance(chan, discord.TextChannel):  # and chan.permissions_for(self.bot.me).read_messages:
+            if isinstance(chan, discord.TextChannel):
                 await conn.execute(f'CREATE TABLE IF NOT EXISTS c{chan.id} (' + '''
                       id int8 PRIMARY KEY,
                       author int8 NOT NULL,
@@ -246,8 +252,19 @@ class DB(commands.Cog):
         else:
             timestamp = datetime.utcnow()
         async with self.bot.pool.acquire() as conn:
-            await conn.execute(f'update c{chan_id} set edited_at = $1 where id = $2', timestamp, payload.message_id)
-            # todo: content update
+            await conn.set_type_codec(
+                'json',
+                encoder=json.dumps,
+                decoder=json.loads,
+                schema='pg_catalog'
+            )
+            prev = await conn.fetchrow(f'select * from c{chan_id} where id = $1', payload.message_id)
+            content = payload.data['content'] if 'content' in payload.data else prev['content']
+            embed = prev['embed']
+            if 'embeds' in payload.data and payload.data['embeds'] and payload.data['embeds'][0]['type'] == 'rich':
+                embed = payload.data['embeds'][0]
+            await conn.execute(f'update c{chan_id} set edited_at = $1, content = $2, embed = $3 where id = $4',
+                               timestamp, content, embed, payload.message_id)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, event):

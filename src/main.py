@@ -131,7 +131,7 @@ async def reload(ctx, extension_name: str):
         try:
             bot.unload_extension(extension_name)
             await ctx.send('{} unloaded.'.format(extension_name))
-        except commands.errors.CommandInvokeError:
+        except discord.ext.commands.errors.ExtensionNotLoaded:
             pass
         try:
             bot.load_extension(extension_name)
