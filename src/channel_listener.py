@@ -15,7 +15,7 @@ class ChannelListener(commands.Cog):
         self.chan_changes = dict()
         self.task = self.bot.loop.create_task(self.listener())
 
-    def __unload(self):
+    def cog_unload(self):
         if self.task is not None:
             self.task.cancel()
             print('cancelled task')

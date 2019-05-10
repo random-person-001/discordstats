@@ -159,6 +159,7 @@ if __name__ == '__main__':
         bot.config = config
         bot.db = get_db()  # load the db file. User doesn't have to touch this
         bot.mydatacache = dict()  # for caching data for graphing
+        bot.pool = None  # postgres connection pool
         for extension in config['extensions']:
             try:
                 bot.load_extension(extension)

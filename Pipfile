@@ -12,6 +12,8 @@ numpy = "*"
 matplotlib = "*"
 scipy = "*"
 rethinkdb = "*"
+asyncpg = "*"
+emoji = "*"
 
 [requires]
 python_version = "3.7"
