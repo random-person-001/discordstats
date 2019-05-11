@@ -72,7 +72,7 @@ def make_grid(rows=7, cols=7, density=.3):
     return stringify(grid)
 
 
-class Minesweeper:
+class Minesweeper(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
