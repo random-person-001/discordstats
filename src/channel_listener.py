@@ -119,4 +119,7 @@ class ChannelListener(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(ChannelListener(bot))
+    if 'skip_channel_listener' in bot.config and bot.config['skip_channel_listener']:
+        print('skipped adding channel listener cog, per config')
+    else:
+        bot.add_cog(ChannelListener(bot))
