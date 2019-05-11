@@ -1,4 +1,3 @@
-import os
 import pprint
 import asyncio
 import traceback
