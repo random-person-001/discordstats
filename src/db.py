@@ -7,6 +7,7 @@ import asyncpg
 import discord
 from discord.ext import commands
 from emoji import UNICODE_EMOJI
+import markovify
 
 
 def is_emoji(s):
@@ -56,7 +57,7 @@ def get_channel_widths(res: list):
 
 
 def str_chan_res(res: list):
-    """Take the result from a channel and stringify it"""
+    """stringify a asyncpg.Result list for sending in chat"""
     if len(res) <= 5:
         return '\n'.join(discord.utils.escape_markdown(str(r), as_needed=False) for r in res)
     if len(res) > 100:
@@ -134,10 +135,17 @@ class MyConn(asyncpg.connection.Connection):
             )
 
 
+def markov_model(rows, state_size=1):
+    """Blocking function to generate a markov model from the returned rows of a db query"""
+    text = '\n'.join(r[0] for r in rows)
+    return markovify.NewlineText(text, state_size=state_size)
+
+
 class DB(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.loop.create_task(self.connect())
+        self.markov_model = None
 
     def cog_unload(self):
         self.bot.loop.create_task(self.disconnect())
@@ -169,6 +177,20 @@ class DB(commands.Cog):
                       reactions json DEFAULT NULL
                 )
                 ''')
+
+    @commands.command()
+    @commands.is_owner()
+    async def markov(self, ctx, chan_id: int):
+        """Create a markov string from past messages in a channel."""
+        async with self.bot.pool.acquire() as conn:
+            res = await conn.fetch(f'select content from c{chan_id} where not del')
+            text_model = await ctx.bot.loop.run_in_executor(None, markov_model, rows=res)
+
+        n = 15
+        for i in range(n):
+            s = text_model.make_sentence()
+            if s:
+                await ctx.send(discord.utils.escape_mentions(s))
 
     @commands.command()
     @commands.is_owner()
@@ -209,6 +231,14 @@ class DB(commands.Cog):
             await self.create_chan_table(chan)
         await ctx.send('done')
 
+    @commands.command()
+    @commands.is_owner()
+    async def log_back(self, ctx, chan_id: int, n: int):
+        chan = discord.utils.get(ctx.bot.get_all_channels(), id=chan_id)
+        async for message in chan.history(limit=n):
+            await self.on_message(message)
+        await ctx.send('done')
+
     @commands.command(hidden=True)
     @commands.is_owner()
     async def drop_pg_tables(self, ctx):
@@ -227,8 +257,10 @@ class DB(commands.Cog):
             attachment = None
 
             if msg.attachments:
-                print(msg.attachments)
-                print(msg.attachments[0].url)
+                # since I always assume there's max of 1 attachment per message, tell me if this is ever wrong
+                if len(msg.attachments) > 1:
+                    locke = discord.utils.get(self.bot.users, id=275384719024193538)
+                    await locke.send('Yo this message has more than one attachment, fix yo code: ' + msg.jump_url)
                 attachment = msg.attachments[0].url
 
             if msg.embeds:
@@ -241,8 +273,11 @@ class DB(commands.Cog):
                     schema='pg_catalog'
                 )
 
-            await conn.execute(f"insert into c{msg.channel.id} values ($1, $2, $3, $4, 'f', NULL, $5, $6)",
-                               msg.id, msg.author.id, msg.author.bot, msg.content, attachment, embeds)
+            try:
+                await conn.execute(f"insert into c{msg.channel.id} values ($1, $2, $3, $4, 'f', NULL, $5, $6)",
+                                   msg.id, msg.author.id, msg.author.bot, msg.content, attachment, embeds)
+            except asyncpg.exceptions.UniqueViolationError:
+                print('not adding duplicate message')
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload):

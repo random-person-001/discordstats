@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "485df5a90bf7360c7ba2d489f5956191af32a416ac4b395b39a5bf4b93e53159"
+            "sha256": "4bcafb51c3b42c501544f92659e46a072e1f0e689ad66f40a0c953520739800f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -147,6 +147,13 @@
                 "sha256:f790f8b3dff3d53453de6a7b7ddd173d2e020fb160baff578d578065b108a05f"
             ],
             "version": "==1.1.0"
+        },
+        "markovify": {
+            "hashes": [
+                "sha256:f016ef58f60a8afb925aa16803538561c4b00375bf0b7f84952c29993805b9a7"
+            ],
+            "index": "pypi",
+            "version": "==0.7.1"
         },
         "matplotlib": {
             "hashes": [
@@ -300,6 +307,13 @@
             ],
             "index": "pypi",
             "version": "==0.10.0"
+        },
+        "unidecode": {
+            "hashes": [
+                "sha256:092cdf7ad9d1052c50313426a625b717dab52f7ac58f859e09ea020953b1ad8f",
+                "sha256:8b85354be8fd0c0e10adbf0675f6dc2310e56fda43fa8fe049123b6c475e52fb"
+            ],
+            "version": "==1.0.23"
         },
         "websockets": {
             "hashes": [
