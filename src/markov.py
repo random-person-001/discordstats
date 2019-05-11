@@ -45,7 +45,10 @@ class MarkovChannel:
         becomes
         Right now I'm thinking about this, no
         """
-        # todo: this regex works great except for the n't and 's sequences. Fix 'em
+        # todo: this regex works great except for the
+        #  n't and 's sequences, which are hackily added at the end.
+        #  Make that more elegant.
+        # https://regexper.com/ is a nice regex visualization tool.
 
         # get rid of weird spaces
         text = re.sub(r" ([',.!?;]|n't|nt|'s)", r"\1", text)
@@ -114,9 +117,9 @@ class MarkovChannel:
     def _model(self, text, bot: bool):
         """Train a model based on inputted text"""
         if bot:
-            self.bot_model = POSifiedText(text)
+            self.bot_model = POSifiedText(text, state_size=2)
         else:
-            self.human_model = POSifiedText(text)
+            self.human_model = POSifiedText(text, state_size=2)
 
     async def ensure_ready(self):
         """Ensure that the models are initialized"""
@@ -125,7 +128,6 @@ class MarkovChannel:
 
     async def populate(self):
         """Generate markov models"""
-        # todo: ignore messages sent by itself
         self.updated_at = datetime.utcnow()
         bot_text_training_set = ''
         human_text_training_set = ''
@@ -164,7 +166,7 @@ class MarkovChannel:
 
     def _make_sentence(self, model) -> str:
         """Get the next sentence for a model"""
-        sentence = model.make_sentence()
+        sentence = model.make_sentence(tries=20)
         if sentence:
             return self.prettify(sentence)
         return 'not enough variety in this channel :cry:'
