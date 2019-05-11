@@ -21,6 +21,8 @@ In a terminal, run `git clone https://github.com/random-person-001/discordstats.
 
 You'll need a [discord token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token) to get the bot running. Rename `exampleconfig.toml` to `config.toml` and put the token in there.
 
+  You may have to run `pipenv python -m spacy download en_core_web_sm`
+
 Then run
 `pipenv install` and `pipenv run python src/main.py`
 

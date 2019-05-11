@@ -15,6 +15,7 @@ rethinkdb = "*"
 asyncpg = "*"
 emoji = "*"
 markovify = "*"
+spacy = "*"
 
 [requires]
 python_version = "3.7"

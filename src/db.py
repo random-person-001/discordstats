@@ -7,7 +7,6 @@ import asyncpg
 import discord
 from discord.ext import commands
 from emoji import UNICODE_EMOJI
-import markovify
 
 
 def is_emoji(s):
@@ -16,7 +15,7 @@ def is_emoji(s):
 
 def truncate(s: str, length: int):
     """Truncate and escape a string to certain length"""
-    s = s.replace('\n', ' ').replace('```', '\\```')
+    s = s.replace('\n', ' ').replace('`', '\\`')
     emoji_so_far = 0
     for i in range(len(s)):
         if is_emoji(s[i]) or s[i] == '︵':
@@ -58,7 +57,7 @@ def get_channel_widths(res: list):
 def str_chan_res(res: list):
     """stringify a asyncpg.Result list for sending in chat"""
     if len(res) <= 5:
-        return '\n'.join((str(r)) for r in res).replace('```', '\\```')
+        return '\n'.join((str(r)) for r in res).replace('`', '\\`')
     if len(res) > 100:
         res2 = res[:50]
         res2.extend(res[:-50])
@@ -103,8 +102,8 @@ def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
     #  {'emoji': '<a:trash:234567>', 'count': 3, 'users': [654, 3456, 567]}]
 
     if event.emoji.is_custom_emoji():
-        emoji_str = ('<a:' if event.emoji.animated else '<:') \
-               + f'{event.emoji.name}:{event.emoji.id}>'
+        emoji_str = ('<a:' if event.emoji.animated else '<:')
+        emoji_str += f'{event.emoji.name}:{event.emoji.id}>'
     else:
         emoji_str = event.emoji.name  # this will be unicode
     is_new_reaction = True
@@ -133,13 +132,6 @@ async def init_connection(conn):
                               decoder=json.loads,
                               schema='pg_catalog'
                               )
-
-
-def markov_model(rows, state_size=1):
-    """Blocking function to generate a markov model
-     from the returned rows of a db query"""
-    text = '\n'.join(r[0] for r in rows)
-    return markovify.NewlineText(text, state_size=state_size)
 
 
 class DB(commands.Cog):
@@ -182,20 +174,6 @@ class DB(commands.Cog):
                       reactions json DEFAULT NULL
                 )
                 ''')
-
-    @commands.command()
-    @commands.is_owner()
-    async def markov(self, ctx, chan_id: int):
-        """Create a markov string from past messages in a channel."""
-        async with self.bot.pool.acquire() as conn:
-            res = await conn.fetch(f'select content from c{chan_id} where not del')
-            text_model = await ctx.bot.loop.run_in_executor(None, markov_model, rows=res)
-
-        n = 15
-        for i in range(n):
-            s = text_model.make_sentence()
-            if s:
-                await ctx.send(discord.utils.escape_mentions(s))
 
     @commands.command()
     @commands.is_owner()
