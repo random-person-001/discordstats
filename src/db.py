@@ -15,7 +15,7 @@ def is_emoji(s):
 
 
 def truncate(s: str, length: int):
-    """Truncate and escape a string of certain length"""
+    """Truncate and escape a string to certain length"""
     s = s.replace('\n', ' ')
     s = discord.utils.escape_markdown(s).replace('\\_', '_').replace('\\*', '*')
     emoji_so_far = 0
@@ -38,10 +38,6 @@ def get_channel_widths(res: list):
     default_widths = {'id': 19, 'author': 19, 'bot': 1, 'content': 20, 'deleted': 1, 'edited_at': 5, 'embed': 1,
                       'attachment': 6, 'reactions': 1}
     # if it mostly matches our default data set, return this
-    s = str(res)
-    if len(s) > 2000:
-        s = s[:2000]
-    print(s)
     if sum(key in default_widths for key in res[0].keys()) >= len(default_widths)/2:
         return default_widths
     # else we gotta guess
@@ -64,11 +60,12 @@ def str_chan_res(res: list):
         res2 = res[:50]
         res2.extend(res[:-50])
         res = res2
-    # set up buckets
+    # header stuff
     widths = get_channel_widths(res)
     out = '(╯°□°）╯︵ ┻━┻\n<Fields:'
     for key in res[0].keys():
         out += ' ' + key
+    # tabley stuff
     for r in res:
         out += '\n|'
         for item in r.items():
@@ -195,7 +192,7 @@ class DB(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def post(self, ctx, *, query):
-        """Run an sql query"""
+        """Run a postgres sql query"""
         async with self.bot.pool.acquire() as conn:
             try:
                 response = await conn.fetch(query)
@@ -227,6 +224,7 @@ class DB(commands.Cog):
     @commands.command(hidden=True)
     @commands.is_owner()
     async def create_tables(self, ctx):
+        """Create activity tables for all channels I can see.  This should only be run once, on setup."""
         for chan in self.bot.get_all_channels():
             await self.create_chan_table(chan)
         await ctx.send('done')
@@ -234,6 +232,7 @@ class DB(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def log_back(self, ctx, chan_id: int, n: int):
+        """Ensure we have the last `n` messages sent from a channel in our local db"""
         chan = discord.utils.get(ctx.bot.get_all_channels(), id=chan_id)
         async for message in chan.history(limit=n):
             await self.on_message(message)
