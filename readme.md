@@ -3,7 +3,7 @@ Many random features.
 
 Probably the nicest is graphing stats about channel activity, but it also bugs you when channels are dragged out of order, and when people try to write secret messages as reactions to ancient messages.  And a NASA APOD thing too.
 
-Built with python 3.7 and discord.py, using matplotlib.
+Built with python 3.7 and discord.py, using matplotlib and postgresql.
 
 Note that in its current implementation, the graphing occurs in the main bot thread.  This is blocking, and is bad, and the bot will not respond while it occurs.  Eventually I may improve that.
 
@@ -15,7 +15,7 @@ Note that in its current implementation, the graphing occurs in the main bot thr
 
 ## Installing
 This uses [pipenv](https://pipenv.readthedocs.io/en/latest/install/) so make sure you have that installed.
-The bot was built for linux, so should work fine there and on macs.  There's a chance that, as ever, making the code run on windows could have some hiccups. You should also make sure you have SQLite 3 on your system.
+The bot was built for linux, so should work fine there and on macs.  There's a chance that, as ever, making the code run on windows could have some hiccups. You should also install postgresql 10.
 
 In a terminal, run `git clone https://github.com/random-person-001/discordstats.git && cd discordstats`
 

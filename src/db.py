@@ -16,13 +16,12 @@ def is_emoji(s):
 
 def truncate(s: str, length: int):
     """Truncate and escape a string to certain length"""
-    s = s.replace('\n', ' ')
-    s = discord.utils.escape_markdown(s).replace('\\_', '_').replace('\\*', '*')
+    s = s.replace('\n', ' ').replace('```', '\\```')
     emoji_so_far = 0
     for i in range(len(s)):
         if is_emoji(s[i]) or s[i] == '︵':
             emoji_so_far += 1
-        # emoji are two characters wide
+        # emoji are (about) two characters wide
         if i + emoji_so_far >= length:
             s = s[:i]
             break
@@ -35,105 +34,110 @@ def truncate(s: str, length: int):
 
 def get_channel_widths(res: list):
     """Get a dict of field names : field lengths"""
-    default_widths = {'id': 19, 'author': 19, 'bot': 1, 'content': 20, 'deleted': 1, 'edited_at': 5, 'embed': 1,
-                      'attachment': 6, 'reactions': 1}
+    default_widths = {'id': 19, 'author': 19, 'bot': 1,
+                      'content': 20, 'deleted': 1, 'edited_at': 5,
+                      'embed': 1, 'attachment': 6, 'reactions': 1}
+
     # if it mostly matches our default data set, return this
-    if sum(key in default_widths for key in res[0].keys()) >= len(default_widths)/2:
+    similarities = sum(key in default_widths for key in res[0].keys())
+    if similarities >= len(default_widths) / 2:
         return default_widths
+
     # else we gotta guess
-    maxes = dict()
+    widths = dict()
     for r in res:
-        for item in r.items():
-            if item[0] not in maxes:
-                maxes[item[0]] = 1
-            if item[1] and not isinstance(item[1], bool):
-                maxes[item[0]] = min(20, max(len(str(item[1])), maxes[item[0]]))
-    print(maxes)
-    return maxes
+        for (field, value) in r.items():
+            if field not in widths:
+                widths[field] = 1
+            if value and not isinstance(value, bool):
+                widths[field] = min(20, max(len(str(value)), widths[field]))
+    print(widths)
+    return widths
 
 
 def str_chan_res(res: list):
     """stringify a asyncpg.Result list for sending in chat"""
     if len(res) <= 5:
-        return '\n'.join(discord.utils.escape_markdown(str(r), as_needed=False) for r in res)
+        return '\n'.join((str(r)) for r in res).replace('```', '\\```')
     if len(res) > 100:
         res2 = res[:50]
         res2.extend(res[:-50])
         res = res2
-    # header stuff
+
     widths = get_channel_widths(res)
     out = '(╯°□°）╯︵ ┻━┻\n<Fields:'
-    for key in res[0].keys():
-        out += ' ' + key
-    # tabley stuff
+    out += ' '.join(key for key in res[0].keys())
+
     for r in res:
         out += '\n|'
         for item in r.items():
-            if item[0] in widths:
-                width = widths[item[0]]
-            else:
-                width = 1
-            val = str(item[1])
-            if not item[1]:
-                val = ''
+            width = widths[item[0]] if item[0] in widths else 1
+            val = str(item[1]) if item[1] else ''
             out += truncate(val.ljust(width), width) + '|'
     return out
 
 
 async def reactions_to_json(reactions: List[discord.Reaction]):
-    """Given a list of Reactions to a message, return a suitable json representation of them"""
-    l = []
+    """Given a list of Reactions to a message,
+    return a suitable json representation of them
+    """
+    # this code is untested.
+    out = []
     for reaction in reactions:
-        emoj = reaction.emoji  # this will be unicode if standard emoji
+        emoji_str = reaction.emoji  # this will be unicode if standard emoji
         if reaction.custom_emoji:
-            emoj = ('<a:' if reaction.emoji.animated else '<:') + reaction.emoji.name + ':' + reaction.emoji.id + '>'
+            emoji_str = ('<a:' if reaction.emoji.animated else '<:') \
+                   + f'{reaction.emoji.name}:{reaction.emoji.id}>'
         users = (user.id for user in await reaction.users().flatten())
-        l.append({'emoji': emoj, 'count': reaction.count, 'users': users})
-    return json.dumps(l)
+        out.append({'emoji': emoji_str, 'count': reaction.count, 'users': users})
+    return json.dumps(out)
 
 
 def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
-    """Given a previous reaction representation, adjust for a new reaction added and return the new suitable json
-    representation"""
+    """Adjust for a new reaction added to a message,
+    given a previous reaction representation,
+    and return the new suitable json representation
+    """
     # Sample representation of the data structure here:
-    # prev = [{'emoji': '\ud83d\udc40👍', 'count': 2, 'users': [23456, 23456]},
-    #        {'emoji': '<a:trash:234567>', 'count': 3, 'users': [654, 3456, 567]}]
+    # [{'emoji': '\ud83d\udc40👍', 'count': 2, 'users': [23456, 23456]},
+    #  {'emoji': '<a:trash:234567>', 'count': 3, 'users': [654, 3456, 567]}]
 
     if event.emoji.is_custom_emoji():
-        emoj = ('<a:' if event.emoji.animated else '<:') + event.emoji.name + ':' + str(event.emoji.id) + '>'
+        emoji_str = ('<a:' if event.emoji.animated else '<:') \
+               + f'{event.emoji.name}:{event.emoji.id}>'
     else:
-        emoj = event.emoji.name  # this will be unicode
+        emoji_str = event.emoji.name  # this will be unicode
     is_new_reaction = True
+    print(prev)
+    print(type(prev))
     if prev:
         prev = json.loads(prev)
         for reaction in prev:
-            if reaction['emoji'] == emoj:
+            if reaction['emoji'] == emoji_str:
                 reaction['count'] += 1
                 reaction['users'].append(event.user_id)
                 is_new_reaction = False
     else:
         prev = list()
     if is_new_reaction:
-        prev.append({'emoji': emoj, 'count': 1, 'users': [event.user_id]})
+        prev.append({'emoji': emoji_str, 'count': 1, 'users': [event.user_id]})
     return json.dumps(prev)
 
 
-# todo: make this actually work
-class MyConn(asyncpg.connection.Connection):
-    # encode and decode json as dicts rather than strings
-
-    async def __aenter__(self):
-        print('MyConn is being entered')  # never triggers
-        await self.set_type_codec(
-                'json',
-                encoder=json.dumps,
-                decoder=json.loads,
-                schema='pg_catalog'
-            )
+async def init_connection(conn):
+    """Set json data that we get from the db to be parsed
+    into a python data structure for us, and write that way too
+    """
+    await conn.set_type_codec('json',
+                              encoder=json.dumps,
+                              decoder=json.loads,
+                              schema='pg_catalog'
+                              )
 
 
 def markov_model(rows, state_size=1):
-    """Blocking function to generate a markov model from the returned rows of a db query"""
+    """Blocking function to generate a markov model
+     from the returned rows of a db query"""
     text = '\n'.join(r[0] for r in rows)
     return markovify.NewlineText(text, state_size=state_size)
 
@@ -149,10 +153,13 @@ class DB(commands.Cog):
 
     async def connect(self):
         if not self.bot.pool or self.bot.pool._closed:
-            self.bot.pool = await asyncpg.create_pool(user=self.bot.config['postgresuser'],
-                                                      password=self.bot.config['postgrespwd'],
-                                                      database='discord', host='127.0.0.1', loop=self.bot.loop,
-                                                      connection_class=MyConn)
+            args = {'user': self.bot.config['postgresuser'],
+                    'password': self.bot.config['postgrespwd'],
+                    'database': 'discord',
+                    'host': '127.0.0.1',
+                    'loop': self.bot.loop,
+                    'init': init_connection}
+            self.bot.pool = await asyncpg.create_pool(**args)
             print('db pool initialized')
         print('db connected!')
 
@@ -162,7 +169,8 @@ class DB(commands.Cog):
     async def create_chan_table(self, chan):
         async with self.bot.pool.acquire() as conn:
             if isinstance(chan, discord.TextChannel):
-                await conn.execute(f'CREATE TABLE IF NOT EXISTS c{chan.id} (' + '''
+                await conn.execute(
+                    f'CREATE TABLE IF NOT EXISTS c{chan.id} (' + '''
                       id int8 PRIMARY KEY,
                       author int8 NOT NULL,
                       bot bool NOT NULL default 'f',
@@ -224,7 +232,9 @@ class DB(commands.Cog):
     @commands.command(hidden=True)
     @commands.is_owner()
     async def create_tables(self, ctx):
-        """Create activity tables for all channels I can see.  This should only be run once, on setup."""
+        """Create activity tables for all channels I can see.
+        This should only be run once, on setup.
+        """
         for chan in self.bot.get_all_channels():
             await self.create_chan_table(chan)
         await ctx.send('done')
@@ -232,7 +242,9 @@ class DB(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def log_back(self, ctx, chan_id: int, n: int):
-        """Ensure we have the last `n` messages sent from a channel in our local db"""
+        """Ensure we have the last `n` messages sent
+        from a channel in our local db
+        """
         chan = discord.utils.get(ctx.bot.get_all_channels(), id=chan_id)
         async for message in chan.history(limit=n):
             await self.on_message(message)
@@ -243,7 +255,7 @@ class DB(commands.Cog):
     async def drop_pg_tables(self, ctx):
         async with self.bot.pool.acquire() as conn:
             for chan in self.bot.get_all_channels():
-                if isinstance(chan, discord.TextChannel):  # and chan.permissions_for(self.bot.me).read_messages:
+                if isinstance(chan, discord.TextChannel):
                     await conn.execute(f'DROP TABLE IF EXISTS c{chan.id}')
         await ctx.send('done')
 
@@ -256,10 +268,13 @@ class DB(commands.Cog):
             attachment = None
 
             if msg.attachments:
-                # since I always assume there's max of 1 attachment per message, tell me if this is ever wrong
+                # since I always assume there's max of 1
+                # attachment per message, tell me if this is ever wrong
                 if len(msg.attachments) > 1:
+                    print('\n\nMESSAGE WITH MULTIPLE EMBEDS: ' + msg.jump_url)
                     locke = discord.utils.get(self.bot.users, id=275384719024193538)
-                    await locke.send('Yo this message has more than one attachment, fix yo code: ' + msg.jump_url)
+                    await locke.send('Yo this message has more than '
+                                     'one attachment, fix yo code: ' + msg.jump_url)
                 attachment = msg.attachments[0].url
 
             if msg.embeds:
@@ -273,10 +288,14 @@ class DB(commands.Cog):
                 )
 
             try:
-                await conn.execute(f"insert into c{msg.channel.id} values ($1, $2, $3, $4, 'f', NULL, $5, $6)",
-                                   msg.id, msg.author.id, msg.author.bot, msg.content, attachment, embeds)
+                await conn.execute(f"insert into c{msg.channel.id} values "
+                                   f"($1, $2, $3, $4, 'f', NULL, $5, $6)",
+                                   msg.id, msg.author.id, msg.author.bot,
+                                   msg.content, attachment, embeds)
             except asyncpg.exceptions.UniqueViolationError:
-                print('not adding duplicate message')
+                # this method is called for fetching historical records,
+                # so we occasionally fetch something already in the db
+                pass
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload):
@@ -307,7 +326,8 @@ class DB(commands.Cog):
             prev = await conn.fetchval(f"select reactions from c{event.channel_id} where id = $1", event.message_id)
             print(prev)
             new_val = add_reaction_to_json(event, prev)
-            await conn.execute(f"update c{event.channel_id} set reactions = $1 where id = $2", new_val, event.message_id)
+            await conn.execute(f"update c{event.channel_id} set reactions = $1 where id = $2",
+                               new_val, event.message_id)
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, event):
