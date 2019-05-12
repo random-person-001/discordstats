@@ -1,7 +1,7 @@
 # Discord Data bot
 Many random features.
 
-Probably the nicest is graphing stats about channel activity, but it also bugs you when channels are dragged out of order, and when people try to write secret messages as reactions to ancient messages.  And a NASA APOD thing too.
+Probably the nicest is graphing stats about channel activity, but it also bugs you when channels are dragged out of order, and when people try to write secret messages as reactions to ancient messages.  And a NASA APOD thing too.  And simulated messages from markov chains.
 
 Built with python 3.7 and discord.py, using matplotlib and postgresql.
 
@@ -15,7 +15,7 @@ Note that in its current implementation, the graphing occurs in the main bot thr
 
 ## Installing
 This uses [pipenv](https://pipenv.readthedocs.io/en/latest/install/) so make sure you have that installed.
-The bot was built for linux, so should work fine there and on macs.  There's a chance that, as ever, making the code run on windows could have some hiccups. You should also install postgresql 10.
+The bot was built for linux, so should work fine there and on macs.  There's a chance that, as ever, making the code run on windows could have some hiccups. You should also install postgresql 10, which you should take a look at `environment_setup.md` for, after the pip stuff.
 
 In a terminal, run `git clone https://github.com/random-person-001/discordstats.git && cd discordstats`
 
