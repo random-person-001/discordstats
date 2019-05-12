@@ -11,11 +11,12 @@ toml = "*"
 numpy = "*"
 matplotlib = "*"
 scipy = "*"
-rethinkdb = "*"
+rethinkdb = "*" 
 asyncpg = "*"
 emoji = "*"
 markovify = "*"
 spacy = "*"
+psutil = "*"
 
 [requires]
 python_version = "3.7"

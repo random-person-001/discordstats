@@ -195,20 +195,6 @@ class DB(commands.Cog):
 
     @commands.command(hidden=True)
     @commands.is_owner()
-    async def eval(self, ctx, *, code: str):
-        """Execute arbitrary python code. Owner only."""
-        # noinspection PyBroadException
-        try:
-            result = eval(code)
-        except Exception:
-            await ctx.send(traceback.format_exc(chain=False))
-        else:
-            if len(str(result)) > 2000 - 15:
-                result = str(result)[:1985]
-            await ctx.send(f'```py\n{result}```')
-
-    @commands.command(hidden=True)
-    @commands.is_owner()
     async def create_tables(self, ctx):
         """Create activity tables for all channels I can see.
         This should only be run once, on setup.
