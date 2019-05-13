@@ -171,7 +171,7 @@ async def update(ctx):
         original_pipfile = f.read()
 
     # run git pull.  If nothing new is pulled, exit here.
-    pull_output = ctx.invoke(ctx.bot.get_command('pull'))
+    pull_output = await ctx.invoke(ctx.bot.get_command('pull'))
     if 'Already up to date.' in pull_output:
         return
 
