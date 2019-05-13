@@ -19,7 +19,7 @@ I guess get in the database with like
 ```bash 
 sudo -u postgres psql
 ``` 
-and set a password with like `ALTER USER discord WITH PASSWORD 'new_password';`
+and set a password with like `\password discord` (`\q` to exit)
 Save those credentials to the config file.
 
 Download data for spacy sentence parsing (used to improve markov chaining): 

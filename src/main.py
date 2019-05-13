@@ -175,6 +175,9 @@ async def update(ctx):
     if 'Already up to date.' in pull_output:
         return
 
+    commit_message = subprocess.run(['git', 'log', '-1', '--pretty=%B'], stdout=subprocess.PIPE)
+    await ctx.send('```yaml\n{}```'.format(commit_message.stdout.decode('utf-8')))
+
     # read new contents of pipfile
     with open('Pipfile') as f:
         new_pipfile = f.read()
