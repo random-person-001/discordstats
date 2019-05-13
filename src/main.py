@@ -185,7 +185,7 @@ async def update(ctx):
     if new_pipfile == original_pipfile:
         pattern = r" src/(.*).py *\| [0-9]{1,9} \+{0,}-{0,}\n"
         names = re.findall(pattern, pull_output)
-        if 'main' not in names:
+        if not names or 'main' not in names:
             reload_cmd = ctx.bot.get_command('reload')
             for name in names:
                 await ctx.invoke(reload_cmd, extension_name=name)
