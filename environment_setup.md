@@ -15,7 +15,12 @@ Add user named `discord` with corresponding db (superuser is convenient)
 ```bash
 sudo -u postgres createuser --interactive
 ```
-Save its credentials to the config file.
+I guess get in the database with like 
+```bash 
+sudo -u postgres psql
+``` 
+and set a password with like `ALTER USER discord WITH PASSWORD 'new_password';`
+Save those credentials to the config file.
 
 Download data for spacy sentence parsing (used to improve markov chaining): 
 ```bash
