@@ -69,7 +69,8 @@ class Utility(commands.Cog):
         with p.oneshot():
             cpu_time = str(round(p.cpu_times().user)) + ' seconds'
             start_time = p.create_time()
-        age_seconds = datetime.utcnow().timestamp() - start_time
+        # Note: using utcnow() is wrong; we must use now()
+        age_seconds = datetime.now().timestamp() - start_time
         age = str(timedelta(seconds=age_seconds))[:-4]
 
         temp_data = psutil.sensors_temperatures()['coretemp'][0]
@@ -93,7 +94,7 @@ class Utility(commands.Cog):
         e.add_field(name='Commands', value=str(len(ctx.bot.commands)))
         e.add_field(name='Commit Hash', value=commit)
         e.add_field(name='Discord.py Version', value=discord.__version__)
-        e.set_footer(text=python_version + ' running on ' + os_info)
+        e.set_footer(text=python_version + ' on ' + os_info)
         await ctx.send(embed=e)
 
 
