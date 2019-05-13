@@ -1,34 +1,18 @@
 **ROADMAP**
 
-Done
-[X] smooth lines for msg frequencies of various channels
-[X] partial dark theme
-[X] streamlined testing
-[X] x axis proper format for time
-[X] sort channels by total messages, descending
-[X] y axis resizing
-[X] full dark theme
-[X] better legend
-[X] embed in chat
-[X] flexible design
-[X] reactions to commands for feedback
-[X] ability to exclude channels
-[X] bot-only storage file
-[X] legend color codes
-[X] general ui tweaks
-[X] redo cache
-[X] command for nonsmoothed bar graph
-
 Near Future
-[ ] move db.json into sqlite
-[ ] back-harvest a bunch of messages to put into history db
-[ ] migrate graph to read db
+[ ] move db.json into postgres
+[ ] migrate graph stuff to read db
 
 Next
 [ ] fix x axis scaling/label issues
 [ ] increase bar graph bin size
+[ ] back-harvest a bunch of messages to put into history db
 
 later
 [ ] moar, different stats
 [ ] graphing occur in own thread (less blocking)
 [ ] prettier fonts?
+[ ] migrate wolfram and registration to postgres
+[ ] sample lampbot.service file?
+[ ] better documentation (less misleadingly simple)
