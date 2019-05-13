@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import re
 import subprocess
 
 import discord
@@ -135,7 +136,7 @@ async def reload(ctx, extension_name: str):
             pass
         try:
             bot.load_extension(extension_name)
-        except (AttributeError, ImportError) as err:
+        except (AttributeError, ImportError, discord.ext.commands.errors.ExtensionNotFound) as err:
             await ctx.send('```py\n{}: {}\n```'.format(type(err).__name__, str(err)))
             return
         await ctx.send('{} loaded.'.format(extension_name))
@@ -143,15 +144,71 @@ async def reload(ctx, extension_name: str):
         await ctx.send(random.choice(disses))
 
 
-@bot.command()
+@bot.command(hidden=True)
+@commands.is_owner()
 @commands.cooldown(rate=3, per=30)
 async def pull(ctx):
     """Perform git pull"""
+    # returns the string output of the git pull
     if await bot.is_owner(ctx.message.author):
-        result = subprocess.run(['git', 'pull', 'origin', 'master'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        await ctx.send('```yaml\n {}```'.format(result.stdout.decode('utf-8')))
+        res = subprocess.run(['git', 'pull', 'origin', 'master'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        result = res.stdout.decode('utf-8')
+        await ctx.send('```yaml\n {}```'.format(result))
+        return result
     else:
         await ctx.send(random.choice(disses))
+
+
+@bot.command(hidden=True)
+@commands.is_owner()
+async def update(ctx):
+    """Perform a git pull, and reload stuff if changed.
+     If new packages are installed, install them and restart bot,
+     otherwise just reload any changed bot extensions
+     """
+    # read original contents of pipfile
+    with open('Pipfile') as f:
+        original_pipfile = f.read()
+
+    # run git pull.  If nothing new is pulled, exit here.
+    pull_output = ctx.invoke(ctx.bot.get_command('pull'))
+    if 'Already up to date.' in pull_output:
+        return
+
+    # read new contents of pipfile
+    with open('Pipfile') as f:
+        new_pipfile = f.read()
+
+    # if no package changes, we just reload the changed extensions.
+    #  Unless if the main file was changed, which cannot be reloaded,
+    #  in which case the bot must be restarted.
+    if new_pipfile == original_pipfile:
+        pattern = r" src/(.*).py *\| [0-9]{1,9} \+{0,}-{0,}\n"
+        names = re.findall(pattern, pull_output)
+        if 'main' not in names:
+            reload_cmd = ctx.bot.get_command('reload')
+            for name in names:
+                await ctx.invoke(reload_cmd, extension_name=name)
+            await ctx.send('Up to date.')
+            return
+
+    else:
+        # run pipenv install to get all the latest packages
+        await ctx.send('Running `pipenv install`, please hold...')
+        res = subprocess.run(['pipenv', 'install'])
+        if res.returncode is not 0:
+            await ctx.send('Uh oh, found an error while running `pipenv install`.  Time for you to get on fixing it.')
+            return
+
+    # give a verbal notice if our service file (which restarts us) is not running
+    res = subprocess.run(['systemctl', 'status', 'lampbot'], stdout=subprocess.PIPE)
+    if res.returncode != 0:
+        await ctx.send('WARNING: Error fetching lampbot.service status. Make sure I get restarted.')
+    elif 'Active: active (running)' not in res.stdout.decode('utf-8'):
+        await ctx.send('WARNING: lampbot.service does not appear to be running. Restart me manually.')
+
+    # logout
+    await bot.logout()
 
 
 if __name__ == '__main__':
