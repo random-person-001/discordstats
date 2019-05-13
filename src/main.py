@@ -151,7 +151,7 @@ async def pull(ctx):
     """Perform git pull"""
     # returns the string output of the git pull
     if await bot.is_owner(ctx.message.author):
-        res = subprocess.run(['git', 'pull', 'origin', 'master'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        res = subprocess.run(['git', 'pull'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         result = res.stdout.decode('utf-8')
         await ctx.send('```yaml\n {}```'.format(result))
         return result
