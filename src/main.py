@@ -172,7 +172,8 @@ async def update(ctx):
 
     # run git pull.  If nothing new is pulled, exit here.
     pull_output = await ctx.invoke(ctx.bot.get_command('pull'))
-    if 'Already up to date.' in pull_output:
+
+    if 'updating' not in pull_output.lower():
         return
 
     commit_message = subprocess.run(['git', 'log', '-1', '--pretty=%B'], stdout=subprocess.PIPE)
