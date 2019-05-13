@@ -9,7 +9,12 @@ from discord.ext import commands
 import markovify
 import spacy
 
-nlp = spacy.load("en_core_web_sm")
+
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    raise FileNotFoundError("Couldn't find data file for spacey. "
+                            "Try running `pipenv run python -m spacy download en_core_web_sm`")
 
 
 class POSifiedText(markovify.Text):

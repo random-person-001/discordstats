@@ -260,6 +260,12 @@ class DB(commands.Cog):
                 # this method is called for fetching historical records,
                 # so we occasionally fetch something already in the db
                 pass
+            except asyncpg.exceptions.UndefinedTableError:
+                # this can happen when the bot has just been installed and
+                # tables are not yet configured.
+                # Thus we automatically do the configuration.
+                for chan in self.bot.get_all_channels():
+                    await self.create_chan_table(chan)
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload):

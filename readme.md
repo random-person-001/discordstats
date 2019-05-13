@@ -21,9 +21,9 @@ In a terminal, run `git clone https://github.com/random-person-001/discordstats.
 
 You'll need a [discord token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token) to get the bot running. Rename `exampleconfig.toml` to `config.toml` and put the token in there.
 
-  You may have to run `pipenv python -m spacy download en_core_web_sm`
+  You may have to run `pipenv run python -m spacy download en_core_web_sm`
 
 Then run
 `pipenv install` and `pipenv run python src/main.py`
 
-Your bot should hopefully be running!  Invite it somewhere to test with the link https://discordapp.com/api/oauth2/authorize?client_id=LONGNUMBER&scope=bot, replacing `LONGNUMBER` with your bot's discord ID.
+Your bot should hopefully be running!  Invite it somewhere to test with the link https://discordapp.com/api/oauth2/authorize?client_id=LONGNUMBER&scope=bot, replacing `LONGNUMBER` with your bot's discord ID.  If it's your first run, try the command `=create_tables`
