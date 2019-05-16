@@ -79,14 +79,14 @@ async def reactions_to_json(reactions: List[discord.Reaction]):
     """Given a list of Reactions to a message,
     return a suitable json representation of them
     """
-    out = []
+    out = dict()
     for reaction in reactions:
         emoji_str = reaction.emoji  # this will be unicode if standard emoji
         if reaction.custom_emoji:
             emoji_str = ('<a:' if reaction.emoji.animated else '<:') \
                    + f'{reaction.emoji.name}:{reaction.emoji.id}>'
         users = list(user.id for user in await reaction.users().flatten())
-        out.append({'emoji': emoji_str, 'count': reaction.count, 'users': users})
+        out[emoji_str] = users
     if not out:
         return None
     return json.dumps(out)
@@ -97,29 +97,24 @@ def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
     given a previous reaction representation,
     and return the new suitable json representation
     """
-    # Sample representation of the data structure here:
-    # [{'emoji': '\ud83d\udc40👍', 'count': 2, 'users': [23456, 23456]},
-    #  {'emoji': '<a:trash:234567>', 'count': 3, 'users': [654, 3456, 567]}]
+    #  Sample representation of the data structure here:
+    #  {'\ud83d\udc40👍': [23456, 23456]}, '<a:trash:234567>': [654, 3456, 567]}
 
     if event.emoji.is_custom_emoji():
         emoji_str = ('<a:' if event.emoji.animated else '<:')
         emoji_str += f'{event.emoji.name}:{event.emoji.id}>'
     else:
         emoji_str = event.emoji.name  # this will be unicode
-    is_new_reaction = True
     print(prev)
-    print(type(prev))
     if prev:
         prev = json.loads(prev)
-        for reaction in prev:
-            if reaction['emoji'] == emoji_str:
-                reaction['count'] += 1
-                reaction['users'].append(event.user_id)
-                is_new_reaction = False
     else:
-        prev = list()
-    if is_new_reaction:
-        prev.append({'emoji': emoji_str, 'count': 1, 'users': [event.user_id]})
+        prev = dict()
+
+    if emoji_str in prev:
+        prev[emoji_str].append(event.user_id)
+    else:
+        prev[emoji_str] = [event.user_id]
     return json.dumps(prev)
 
 
@@ -211,7 +206,7 @@ class DB(commands.Cog):
         """
         chan = discord.utils.get(ctx.bot.get_all_channels(), id=chan_id)
         async for message in chan.history(limit=n):
-            await self.on_message(message, historic=True)
+            await self.on_message(message)
         await ctx.send('done')
 
     @commands.command(hidden=True)
@@ -224,7 +219,7 @@ class DB(commands.Cog):
         await ctx.send('done')
 
     @commands.Cog.listener()
-    async def on_message(self, msg: discord.message, historic: bool = False):
+    async def on_message(self, msg: discord.message):
         async with self.bot.pool.acquire() as conn:
             if not msg.content:
                 msg.content = ''

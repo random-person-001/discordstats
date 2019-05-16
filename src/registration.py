@@ -21,37 +21,7 @@ DEFAULT_LOCATION = "washington dc"
 class Registration:
 
     def __init__(self, bot: discord.ext.commands.Bot):
-        self.conn = None
         self.bot = bot
-        self.conn_task = self.bot.loop.create_task(self.connect_to_rethinkdb())
-
-    def disconnect(self):
-        if self.conn is not None:
-            self.bot.loop.create_task(self.conn.close())
-
-    async def connect_to_rethinkdb(self):
-        """Create our connection to rethinkdb.  This is what we use for storing user locations.
-        This will create the table and stuff if necessary"""
-        if r is not None:
-            r.set_loop_type("asyncio")
-        print("connecting to rethinkdb....")
-        if 'rethinkdb' not in self.bot.api_keys:
-            print("Looks like you don't have a rethinkdb password specified in the api key file.")
-            print_why_rethinkdb()
-        print("Good, had password in api key file")
-        self.conn = await r.connect("localhost", RETHINKDB_PORT, user='admin', password=self.bot.api_keys['rethinkdb'])
-        print("Connected to rethinkdb")
-
-        try:
-            tables = await r.db("lamp").table_list().run(self.conn)
-        except r.errors.ReqlOpFailedError:
-            await r.db_create("lamp").run(self.conn)
-            await r.db("lamp").table_create("user_locations").run(self.conn)
-            print("Created db and table for lamp user location registration")
-        else:
-            if "user_locations" not in tables:
-                await r.db("lamp").table_create("user_locations").run(self.conn)
-                print("Created table for lamp user location registration")
 
     async def set_location(self, ctx, location: str):
         """Sets a location to localize your wolfram alpha queries to.  You only have to do this once."""

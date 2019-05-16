@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "c0b04e817847577a8c336b64d8ab5d490bef2b54ff4720a03585330e3b997fb4"
+            "sha256": "bff80c94e0be942f3b8a70fe4ff46215b7dc3e1080d8b641037fff399727faac"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -392,14 +392,6 @@
             ],
             "version": "==2.21.0"
         },
-        "rethinkdb": {
-            "hashes": [
-                "sha256:377ebd1e65817fab0e64fd6577dcfa32b74e0464b706271bd3a8069d0dc41d3b",
-                "sha256:a0821549e6e129ca4f3f13460ed2efefc181cc1a794cb20b393b674c7f7c66be"
-            ],
-            "index": "pypi",
-            "version": "==2.4.2.post1"
-        },
         "scipy": {
             "hashes": [
                 "sha256:014cb900c003b5ac81a53f2403294e8ecf37aedc315b59a6b9370dce0aa7627a",
@@ -503,10 +495,10 @@
         },
         "tqdm": {
             "hashes": [
-                "sha256:d385c95361699e5cf7622485d9b9eae2d4864b21cd5a2374a9c381ffed701021",
-                "sha256:e22977e3ebe961f72362f6ddfb9197cc531c9737aaf5f607ef09740c849ecd05"
+                "sha256:0a860bf2683fdbb4812fe539a6c22ea3f1777843ea985cb8c3807db448a0f7ab",
+                "sha256:e288416eecd4df19d12407d0c913cbf77aa8009d7fddb18f632aded3bdbdda6b"
             ],
-            "version": "==4.31.1"
+            "version": "==4.32.1"
         },
         "unidecode": {
             "hashes": [
