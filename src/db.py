@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-import traceback
 from typing import List
 
 import asyncpg
@@ -64,7 +63,7 @@ def str_chan_res(res: list):
         res = res2
 
     widths = get_channel_widths(res)
-    out = '(╯°□°）╯︵ ┻━┻\n<Fields:'
+    out = '(╯°□°）╯︵ ┻━┻\n<Fields: '
     out += ' '.join(key for key in res[0].keys())
 
     for r in res:
@@ -80,15 +79,16 @@ async def reactions_to_json(reactions: List[discord.Reaction]):
     """Given a list of Reactions to a message,
     return a suitable json representation of them
     """
-    # this code is untested.
     out = []
     for reaction in reactions:
         emoji_str = reaction.emoji  # this will be unicode if standard emoji
         if reaction.custom_emoji:
             emoji_str = ('<a:' if reaction.emoji.animated else '<:') \
                    + f'{reaction.emoji.name}:{reaction.emoji.id}>'
-        users = (user.id for user in await reaction.users().flatten())
+        users = list(user.id for user in await reaction.users().flatten())
         out.append({'emoji': emoji_str, 'count': reaction.count, 'users': users})
+    if not out:
+        return None
     return json.dumps(out)
 
 
@@ -211,7 +211,7 @@ class DB(commands.Cog):
         """
         chan = discord.utils.get(ctx.bot.get_all_channels(), id=chan_id)
         async for message in chan.history(limit=n):
-            await self.on_message(message)
+            await self.on_message(message, historic=True)
         await ctx.send('done')
 
     @commands.command(hidden=True)
@@ -224,7 +224,7 @@ class DB(commands.Cog):
         await ctx.send('done')
 
     @commands.Cog.listener()
-    async def on_message(self, msg: discord.message):
+    async def on_message(self, msg: discord.message, historic: bool = False):
         async with self.bot.pool.acquire() as conn:
             if not msg.content:
                 msg.content = ''
@@ -251,11 +251,15 @@ class DB(commands.Cog):
                     schema='pg_catalog'
                 )
 
+            # For logging messages sent previously, this add their reactions in.
+            # New messages won't have reactions, so this just returns null then
+            reactions = await reactions_to_json(msg.reactions)
+
             try:
                 await conn.execute(f"insert into c{msg.channel.id} values "
-                                   f"($1, $2, $3, $4, 'f', NULL, $5, $6)",
+                                   f"($1, $2, $3, $4, 'f', NULL, $5, $6, $7)",
                                    msg.id, msg.author.id, msg.author.bot,
-                                   msg.content, attachment, embeds)
+                                   msg.content, attachment, embeds, reactions)
             except asyncpg.exceptions.UniqueViolationError:
                 # this method is called for fetching historical records,
                 # so we occasionally fetch something already in the db
