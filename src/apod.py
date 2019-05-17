@@ -56,7 +56,7 @@ class Apod(commands.Cog):
         # don't go over discord's embed field length
         if 1993 > len(s):
             s = s[:1990] + '...'
-        s += f'[[more]](https://apod.nasa.gov/apod/ap{fitdate}.html)'
+        s += f'[[more]](https://apod.nasa.gov/apod/ap{date}.html)'
         self.last_json['explanation'] = s
 
     async def update_image(self):
@@ -132,7 +132,7 @@ class Apod(commands.Cog):
             await apod_err_channel.send(
                 'Yo uh I had a big ol whoopsies while trying to post '
                 "the apod here... here's the traceback so mebbe it "
-                'gets fixed:\n\n```arm' + tb + '```')
+                'gets fixed:\n\n```arm\n' + tb + '```')
         else:
             await apod_channel.send(embed=embed)
 
@@ -140,10 +140,10 @@ class Apod(commands.Cog):
     async def before_apod_bg(self):
         print('waiting...')
         await self.bot.wait_until_ready()
-        # wait until 4am before beginning the task
+        # wait until, say 4am before beginning the task
         # (which repeats every 24 hrs after)
         now = datetime.datetime.now()
-        hr = self.bot.config['apod']
+        hr = self.bot.config['apod_post_hour']
         if now.hour < hr:
             dt = datetime.datetime(now.year, now.month, now.day, hour=hr) - now
             print(f'waiting {dt} to start apod')

@@ -199,6 +199,7 @@ async def update(ctx):
     else:
         # run pipenv install to get all the latest packages
         await ctx.send('Running `pipenv install`, please hold...')
+        # Note: when tested in the wild, the bot seemed to be restarted by systemd hereish
         res = subprocess.run(['pipenv', 'install'])
         if res.returncode is not 0:
             await ctx.send('Uh oh, found an error while running `pipenv install`.  Time for you to get on fixing it.')
