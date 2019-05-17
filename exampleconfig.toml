@@ -21,6 +21,16 @@ colormaps = ["Reds_r", "YlOrBr_r", "Greens_r", "Blues_r", "Purples_r", "cividis"
 # NASA API token, for APOD stuff if you want
 nasatoken = ""
 
+# the channel id for where the bot should post NASA's Astronomy Photo Of the Day
+# You'll need to change this to make it work.
+apod_channel = 325354209673216010
+
+# the channel id where it should akwardly log if something goes wrong with posting the APOD
+apod_err_channel = 500896262351093761
+
+# the hour (local time) that the apod should be about posted at (24hr time)
+apod_post_hour = 4
+
 # username and password to postgresql database.  It's assumed you have a database called 'discord'
 postgresuser = "postgres"
 postgrespwd = ""

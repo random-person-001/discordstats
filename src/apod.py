@@ -1,11 +1,13 @@
 import asyncio
-
-import discord
-from discord.ext import commands
+import datetime
 import json
+import time
+import traceback
+
 import aiohttp
 import async_timeout
-import time
+import discord
+from discord.ext import tasks, commands
 
 
 async def fetch_url(url, retries=10):
@@ -18,8 +20,8 @@ async def fetch_url(url, retries=10):
                 async with session.get(url) as response:
                     return await response.text()
             except aiohttp.ClientError:
-                await asyncio.sleep(125/retries**3)  # geometric delay for retries
-                return fetch_url(url, retries-1)
+                await asyncio.sleep(125 / retries ** 3)  # geometric delay for retries
+                return fetch_url(url, retries - 1)
 
 
 class Apod(commands.Cog):
@@ -35,10 +37,15 @@ class Apod(commands.Cog):
         self.last_checked = ''  # stringified version of when we last fetched the apod
         self.last_url = None  # url of the image we got, none if it wasn't an image
         self.last_json = None
+        self.apod_bg.start()
 
     def truncate_explanation(self, date: str):
-        """The description field in a discord embed is limited to 2048 characters.
-        Truncate the explanation to fit, and add a [more] to the end with a link to that day's apod page
+        """Truncate the explanation, and add a [more] to the end
+         with a link to that day's apod page
+
+        The description field in a discord embed is limited to
+        2048 characters, which truncate to.
+
         'date' is an exactly six digit string of year, month, day format.
         """
         s = self.last_json['explanation']
@@ -49,11 +56,13 @@ class Apod(commands.Cog):
         # don't go over discord's embed field length
         if 1993 > len(s):
             s = s[:1990] + '...'
-        s += f'[[more]](https://apod.nasa.gov/apod/ap{date}.html)'
+        s += f'[[more]](https://apod.nasa.gov/apod/ap{fitdate}.html)'
         self.last_json['explanation'] = s
 
     async def update_image(self):
-        """Update internal state to make sure we have the latest and greatest data"""
+        """Update internal state to make sure we have the latest
+        and greatest data
+        """
         today = time.strftime("%Y-%m-%d")
         if today != self.last_checked:
             self.last_checked = today
@@ -67,7 +76,8 @@ class Apod(commands.Cog):
                     self.last_url = self.last_json['url']
             else:
                 self.last_url = None
-                # kinda handle obnoxious unclickable urls (like returned on 2019-04-28)
+                # kinda handle obnoxious unclickable urls
+                # (like returned on 2019-04-28)
                 if self.last_json['url'].startswith('//'):
                     self.last_json['url'] = 'https:' + self.last_json['url']
 
@@ -86,7 +96,10 @@ class Apod(commands.Cog):
             color=0x123e57,
             description=self.last_json['explanation']
         )
-        if self.last_url:  # this is None if the image is not an actual image (like some youtube vid or something)
+
+        # self.last_url is None if the image is not an
+        # actual image (like some youtube vid or something)
+        if self.last_url:
             embed.set_image(url=self.last_url)
         else:
             embed.add_field(name='Link', value=self.last_json['url'])
@@ -96,7 +109,49 @@ class Apod(commands.Cog):
 
     @commands.command()
     async def apod(self, ctx):
+        """Post NASA's Astronomy Picture of the Day here"""
         await ctx.send(embed=await self.get_embed())
+
+    @tasks.loop(hours=24)
+    async def apod_bg(self):
+        apod_channel = self.bot.get_channel(self.bot.config['apod_channel'])
+        apod_err_channel = self.bot.get_channel(self.bot.config['apod_err_channel'])
+        # noinspection PyBroadException
+        try:
+            embed = await self.get_embed()
+        except TimeoutError:
+            traceback.print_exc()  # log to stderr
+            await apod_err_channel.send(
+                'Yo uh kinda awkward but my background task had '
+                'problems fetching the apod from nasa; would some '
+                'human mind trying to make stuff work?')
+        except Exception:
+            # ooh boy something went real wrong
+            traceback.print_exc()  # log to stderr
+            tb = traceback.format_exc()
+            await apod_err_channel.send(
+                'Yo uh I had a big ol whoopsies while trying to post '
+                "the apod here... here's the traceback so mebbe it "
+                'gets fixed:\n\n```arm' + tb + '```')
+        else:
+            await apod_channel.send(embed=embed)
+
+    @apod_bg.before_loop
+    async def before_apod_bg(self):
+        print('waiting...')
+        await self.bot.wait_until_ready()
+        # wait until 4am before beginning the task
+        # (which repeats every 24 hrs after)
+        now = datetime.datetime.now()
+        hr = self.bot.config['apod']
+        if now.hour < hr:
+            dt = datetime.datetime(now.year, now.month, now.day, hour=hr) - now
+            print(f'waiting {dt} to start apod')
+            await asyncio.sleep(dt.total_seconds())
+        else:
+            dt = datetime.datetime(now.year, now.month, now.day + 1, hour=hr) - now
+            print(f'waiting {dt} to start apod tomorrow')
+            await asyncio.sleep(dt.total_seconds())
 
 
 def setup(bot):
