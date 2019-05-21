@@ -41,10 +41,8 @@ def get_channel_widths(res: list):
     if similarities >= len(default_widths) / 2:
         return default_widths
 
-    o = {tuple(res[0].keys())[0]: 93 - 2}  # my max screen width
-    print(o)
-    print(len(res[0]))
-    max_width = max((20, int(92 / len(res[0]))))
+    # allow extra wide columns when there are few of them
+    max_width = max((20, int(90 / len(res[0]) - len(res[0]))))
 
     # else we gotta guess
     widths = dict()
