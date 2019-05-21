@@ -269,7 +269,7 @@ class DB(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload):
         chan_id = payload.data['channel_id']
-        if hasattr(payload, 'cached_message'):
+        if hasattr(payload, 'cached_message') and payload.cached_message is not None:
             timestamp = payload.cached_message.edited_at
         else:
             timestamp = datetime.utcnow()
