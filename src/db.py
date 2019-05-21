@@ -41,6 +41,11 @@ def get_channel_widths(res: list):
     if similarities >= len(default_widths) / 2:
         return default_widths
 
+    o = {tuple(res[0].keys())[0]: 93 - 2}  # my max screen width
+    print(o)
+    print(len(res[0]))
+    max_width = max((20, 92 / len(res[0])))
+
     # else we gotta guess
     widths = dict()
     for r in res:
@@ -48,7 +53,7 @@ def get_channel_widths(res: list):
             if field not in widths:
                 widths[field] = 1
             if value and not isinstance(value, bool):
-                widths[field] = min(20, max(len(str(value)), widths[field]))
+                widths[field] = min(max_width, max(len(str(value)), widths[field]))
     print(widths)
     return widths
 
@@ -89,7 +94,7 @@ async def reactions_to_json(reactions: List[discord.Reaction]):
         out[emoji_str] = users
     if not out:
         return None
-    return json.dumps(out)
+    return out
 
 
 def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
@@ -105,17 +110,18 @@ def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
         emoji_str += f'{event.emoji.name}:{event.emoji.id}>'
     else:
         emoji_str = event.emoji.name  # this will be unicode
-    print(prev)
-    if prev:
-        prev = json.loads(prev)
-    else:
+    if not prev:
         prev = dict()
 
     if emoji_str in prev:
         prev[emoji_str].append(event.user_id)
     else:
         prev[emoji_str] = [event.user_id]
-    return json.dumps(prev)
+    return prev
+
+
+def json_dumps_unicode(data):
+    return json.dumps(data, ensure_ascii=False)
 
 
 async def init_connection(conn):
@@ -123,7 +129,7 @@ async def init_connection(conn):
     into a python data structure for us, and write that way too
     """
     await conn.set_type_codec('json',
-                              encoder=json.dumps,
+                              encoder=json_dumps_unicode,
                               decoder=json.loads,
                               schema='pg_catalog'
                               )
@@ -239,12 +245,6 @@ class DB(commands.Cog):
             if msg.embeds:
                 if msg.embeds[0].type == 'rich':
                     embeds = msg.embeds[0].to_dict()
-                await conn.set_type_codec(
-                    'json',
-                    encoder=json.dumps,
-                    decoder=json.loads,
-                    schema='pg_catalog'
-                )
 
             # For logging messages sent previously, this add their reactions in.
             # New messages won't have reactions, so this just returns null then
@@ -274,12 +274,6 @@ class DB(commands.Cog):
         else:
             timestamp = datetime.utcnow()
         async with self.bot.pool.acquire() as conn:
-            await conn.set_type_codec(
-                'json',
-                encoder=json.dumps,
-                decoder=json.loads,
-                schema='pg_catalog'
-            )
             prev = await conn.fetchrow(f'select * from c{chan_id} where id = $1', payload.message_id)
             content = payload.data['content'] if 'content' in payload.data else prev['content']
             embed = prev['embed']
@@ -290,10 +284,8 @@ class DB(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, event):
-        print(event)
         async with self.bot.pool.acquire() as conn:
             prev = await conn.fetchval(f"select reactions from c{event.channel_id} where id = $1", event.message_id)
-            print(prev)
             new_val = add_reaction_to_json(event, prev)
             await conn.execute(f"update c{event.channel_id} set reactions = $1 where id = $2",
                                new_val, event.message_id)
