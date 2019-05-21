@@ -158,7 +158,7 @@ class Apod(commands.Cog):
         await self.bot.wait_until_ready()
         # wait until, say 4am before beginning the task
         # (which repeats every 24 hrs after)
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         hr = self.bot.config['apod_post_hour']
         if now.hour < hr:
             dt = datetime.datetime(now.year, now.month, now.day, hour=hr) - now
