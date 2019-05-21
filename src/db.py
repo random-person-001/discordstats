@@ -44,7 +44,7 @@ def get_channel_widths(res: list):
     o = {tuple(res[0].keys())[0]: 93 - 2}  # my max screen width
     print(o)
     print(len(res[0]))
-    max_width = max((20, 92 / len(res[0])))
+    max_width = max((20, int(92 / len(res[0]))))
 
     # else we gotta guess
     widths = dict()
@@ -233,13 +233,14 @@ class DB(commands.Cog):
             attachment = None
 
             if msg.attachments:
-                # since I always assume there's max of 1
-                # attachment per message, tell me if this is ever wrong
+                # Except for uploads on mobiles, there is only 1 per message.  I ignore subsequent ones
+                """
                 if len(msg.attachments) > 1:
                     print('\n\nMESSAGE WITH MULTIPLE EMBEDS: ' + msg.jump_url)
                     locke = discord.utils.get(self.bot.users, id=275384719024193538)
                     await locke.send('Yo this message has more than '
                                      'one attachment, fix yo code: ' + msg.jump_url)
+                 """
                 attachment = msg.attachments[0].url
 
             if msg.embeds:
