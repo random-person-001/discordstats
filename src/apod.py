@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import json
+import re
 import time
 import traceback
 
@@ -39,7 +40,7 @@ class Apod(commands.Cog):
         self.last_json = None
         self.apod_bg.start()
 
-    def truncate_explanation(self, date: str):
+    def truncate_explanation(self):
         """Truncate the explanation, and add a [more] to the end
          with a link to that day's apod page
 
@@ -49,14 +50,26 @@ class Apod(commands.Cog):
         'date' is an exactly six digit string of year, month, day format.
         """
         s = self.last_json['explanation']
-        # handle obnoxious addendums like on 2019-04-28
-        if 'click here to see a random' in s.lower():
-            i = s.index('here to see a random')
-            s = s[:s[:i].rindex('.')] + '.'
+        print(s)
+        # Here we handle obnoxious addendums like on
+        # 2019-05-15  2019-04-28  2017-03-20  2017-03-07 2017-03-01  2012-12-30 etc
+        # which are returned in the api's description field mrrg _even though_ the website has a <p> separator
+        # in the html, the api just breezes through that
+        #
+        # Try looking for `sentence end, then spaces, then up to six words, then a colon, then an arbitrary amount
+        #  of words but no periods, then perhaps sentence end punctuation, then end of input` because the
+        #  annoying addendums seem to follow that pattern
+        #
+        addendum = r"([.!?])( +[\w,()+<>=]+){1,6}:( +[^.!?]+)+\W?\Z"
+        split = re.split(addendum, s)
+        s = split[0]
+        # add back punctuation before the addendum
+        if len(split) > 1:
+            s += split[1]
         # don't go over discord's embed field length
-        if 1993 > len(s):
+        if 1993 <= len(s):
             s = s[:1990] + '...'
-        s += f'[[more]](https://apod.nasa.gov/apod/ap{date}.html)'
+            s += '[[more]]({})'.format(self.last_json['permalink'])
         self.last_json['explanation'] = s
 
     async def update_image(self):
@@ -68,7 +81,9 @@ class Apod(commands.Cog):
             self.last_checked = today
             apod_json = await fetch_url(f'https://api.nasa.gov/planetary/apod?date={today}&api_key={self.nasa_key}')
             self.last_json = json.loads(apod_json)
-            self.truncate_explanation(time.strftime('%y%m%d'))
+            smol_date = time.strftime('%y%m%d')
+            self.last_json['permalink'] = f'https://apod.nasa.gov/apod/ap{smol_date}.html'
+            self.truncate_explanation()
             if self.last_json['media_type'] == 'image':
                 if 'hdurl' in self.last_json:
                     self.last_url = self.last_json['hdurl']
@@ -83,8 +98,8 @@ class Apod(commands.Cog):
 
     async def get_embed(self):
         """Build the discord.Embed object to send to the chat"""
-        apod_url = 'https://apod.nasa.gov/'
         await self.update_image()
+        apod_url = self.last_json['permalink']
         if self.last_json is None:
             return discord.Embed(title='Error fetching APOD', color=0x992222, url=apod_url,
                                  description='Maybe try again in a bit?')
@@ -93,7 +108,7 @@ class Apod(commands.Cog):
                                  color=0x5b000a, url=apod_url)
         embed = discord.Embed(
             title='Astronomy Picture Of The Day - ' + self.last_json['title'],
-            color=0x123e57,
+            color=0x123e57, url=apod_url,
             description=self.last_json['explanation']
         )
 
@@ -108,6 +123,7 @@ class Apod(commands.Cog):
         return embed.set_footer(text=self.last_checked, icon_url=nasa_raster_icon)
 
     @commands.command()
+    @commands.guild_only()
     async def apod(self, ctx):
         """Post NASA's Astronomy Picture of the Day here"""
         await ctx.send(embed=await self.get_embed())
