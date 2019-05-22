@@ -127,12 +127,13 @@ class Paginator(discord.ext.commands.Paginator):
         self.channel = channel
         self.bot = bot
         self.msg = None
+        self.dynamic_footer = not embed_kwargs or 'footer' not in embed_kwargs
         if not embed_kwargs:
             embed_kwargs = {'footer': discord.Embed.Empty}
         self.embed_args = embed_kwargs
 
     def get_embed(self):
-        if 'footer' not in self.embed_args or self.embed_args['footer'] == discord.Embed.Empty:
+        if self.dynamic_footer:
             self.embed_args['footer'] = f'Page {self.page_num + 1} of {len(self.pages)}'
         print(self.embed_args)
         return discord.Embed(description=self.pages[self.page_num],
