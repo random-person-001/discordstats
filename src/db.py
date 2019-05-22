@@ -119,30 +119,37 @@ def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
 
 
 class Paginator(discord.ext.commands.Paginator):
-    def __init__(self, bot, channel: discord.TextChannel):
-        # todo: syntax is probs wrong
-        super(prefix='', suffix='', max_size=2048)
+    def __init__(self, bot, channel: discord.TextChannel, **embed_kwargs):
+        super().__init__(prefix='', suffix='', max_size=2048)
         self.dead = False
         self.page_num = 0
         self.channel = channel
         self.bot = bot
         self.msg = None
+        if not embed_kwargs:
+            embed_kwargs = {'title': discord.Embed.Empty}
+        self.embed_args = embed_kwargs
+
+    def get_embed(self):
+        return discord.Embed(description=self.pages[self.page_num],
+                             **self.embed_args)
 
     async def post(self):
         try:
-            self.msg = await self.channel.send(embed=discord.Embed(description=self.pages[self.page_num]))
-            await self.msg.add_reaction('\N{BLACK LEFT-POINTING TRIANGLE}')
-            await self.msg.add_reaction('\N{BLACK RIGHT-POINTING TRIANGLE}')
+            self.msg = await self.channel.send(embed=self.get_embed())
+            if len(self.pages) > 1:
+                await self.msg.add_reaction('\N{BLACK LEFT-POINTING TRIANGLE}')
+                await self.msg.add_reaction('\N{BLACK RIGHT-POINTING TRIANGLE}')
         except discord.errors.Forbidden:
             self.dead = True
 
     async def refresh(self):
         if not self.dead:
-            await self.msg.edit(embed=discord.Embed(description=self.pages[self.page_num]))
+            await self.msg.edit(embed=self.get_embed())
         # todo: attempt to remove all reactions not sent by me
 
     async def on_reaction_add(self, reaction, user):
-        if reaction.message != self.msg or user == self.bot.user or self.dead:
+        if not self.msg or reaction.message.id != self.msg.id or user.id == self.bot.user.id or self.dead:
             return
         if reaction.emoji == '\N{BLACK LEFT-POINTING TRIANGLE}':
             if self.page_num > 0:
@@ -267,7 +274,6 @@ class DB(commands.Cog):
         await ctx.send('done')
 
     @commands.command()
-    @commands.is_owner()
     async def puns(self, ctx, chan: discord.TextChannel):
         """Output a score ranking of puns"""
         query = u" select author, reactions, id" \
@@ -277,17 +283,15 @@ class DB(commands.Cog):
         async with self.bot.pool.acquire() as conn:
             res = await conn.fetch(query)
         print(res)
-        out = ""
+        paginator = Paginator(self.bot, ctx.channel, title='Puns in #' + chan.name)
         for row in res:
-            print(row)
             author = ctx.guild.get_member(row['author'])
             author = 'Gone' if author is None else author.display_name
-            emojis = " ".join(row['reactions'].keys())
+            emojis = " ".join(emoji + ' ' + str(len(row['reactions'][emoji])) for emoji in row['reactions'])
             link = f'https://discordapp.com/channels/{chan.guild.id}/{chan.id}/{row["id"]}'
-            out += f'\n{emojis}    [{author}]({link})'
-        if len(out) > 2000:
-            out = out[:2000]
-        await ctx.send(embed=discord.Embed(description=out))
+            paginator.add_line(f'\n[{emojis} - {author}]({link})')
+        self.paginators.append(paginator)
+        await paginator.post()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
@@ -296,7 +300,7 @@ class DB(commands.Cog):
             if paginator.dead:
                 deads.append(paginator)
             else:
-                paginator.on_reaction_add(reaction, user)
+                await paginator.on_reaction_add(reaction, user)
         for paginator in deads:
             self.paginators.remove(paginator)
 
