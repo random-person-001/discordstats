@@ -120,6 +120,7 @@ def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
 
 class Paginator(discord.ext.commands.Paginator):
     def __init__(self, bot, channel: discord.TextChannel, **embed_kwargs):
+        """If the footer is empty, it will be set to like 'Page x of X'"""
         super().__init__(prefix='', suffix='', max_size=2048)
         self.dead = False
         self.page_num = 0
@@ -127,12 +128,15 @@ class Paginator(discord.ext.commands.Paginator):
         self.bot = bot
         self.msg = None
         if not embed_kwargs:
-            embed_kwargs = {'title': discord.Embed.Empty}
+            embed_kwargs = {'footer': discord.Embed.Empty}
         self.embed_args = embed_kwargs
 
     def get_embed(self):
+        if 'footer' not in self.embed_args or self.embed_args['footer'] == discord.Embed.Empty:
+            self.embed_args['footer'] = f'Page {self.page_num + 1} of {len(self.pages)}'
+        print(self.embed_args)
         return discord.Embed(description=self.pages[self.page_num],
-                             **self.embed_args)
+                             **self.embed_args).set_footer(text=self.embed_args['footer'])
 
     async def post(self):
         try:
