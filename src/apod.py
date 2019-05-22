@@ -50,7 +50,6 @@ class Apod(commands.Cog):
         'date' is an exactly six digit string of year, month, day format.
         """
         s = self.last_json['explanation']
-        print(s)
         # Here we handle obnoxious addendums like on
         # 2019-05-15  2019-04-28  2017-03-20  2017-03-07 2017-03-01  2012-12-30 etc
         # which are returned in the api's description field mrrg _even though_ the website has a <p> separator

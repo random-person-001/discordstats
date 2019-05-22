@@ -87,7 +87,7 @@ async def reactions_to_json(reactions: List[discord.Reaction]):
         emoji_str = reaction.emoji  # this will be unicode if standard emoji
         if reaction.custom_emoji:
             emoji_str = ('<a:' if reaction.emoji.animated else '<:') \
-                   + f'{reaction.emoji.name}:{reaction.emoji.id}>'
+                        + f'{reaction.emoji.name}:{reaction.emoji.id}>'
         users = list(user.id for user in await reaction.users().flatten())
         out[emoji_str] = users
     if not out:
@@ -173,6 +173,13 @@ class DB(commands.Cog):
                       reactions json DEFAULT NULL
                 )
                 ''')
+                # we have a view (titled the same as the table, but with an extra c in front)
+                # of every table that includes the date at which the message was sent
+                await conn.execute(
+                    f' create or replace view cc{chan.id}' +
+                    '  as select *, to_timestamp(((id >> 22) + 1420070400000) / 1000) as date' +
+                    f' from c{chan.id}'
+                )
 
     @commands.command()
     @commands.is_owner()
@@ -221,6 +228,28 @@ class DB(commands.Cog):
                 if isinstance(chan, discord.TextChannel):
                     await conn.execute(f'DROP TABLE IF EXISTS c{chan.id}')
         await ctx.send('done')
+
+    @commands.command()
+    @commands.is_owner()
+    async def puns(self, ctx, chan: discord.TextChannel):
+        """Output a score ranking of puns"""
+        query = u" select author, reactions, id" \
+            f" from c{chan.id}" \
+                "  where reactions::json->>'\U0001F345'" \
+                "  is not null"
+        async with self.bot.pool.acquire() as conn:
+            res = await conn.fetch(query)
+        print(res)
+        out = ""
+        for row in res:
+            print(row)
+            author = ctx.guild.get_member(row['author']).display_name
+            emojis = " ".join(row['reactions'].keys())
+            link = f'https://discordapp.com/channels/{chan.guild.id}/{chan.id}/{row["id"]}'
+            out += f'\n{emojis}    [{author}]({link})'
+        if len(out) > 2000:
+            out = out[:2000]
+        await ctx.send(embed=discord.Embed(description=out))
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.message):
