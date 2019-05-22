@@ -118,6 +118,42 @@ def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
     return prev
 
 
+class Paginator(discord.ext.commands.Paginator):
+    def __init__(self, bot, channel: discord.TextChannel):
+        # todo: syntax is probs wrong
+        super(prefix='', suffix='', max_size=2048)
+        self.dead = False
+        self.page_num = 0
+        self.channel = channel
+        self.bot = bot
+        self.msg = None
+
+    async def post(self):
+        try:
+            self.msg = await self.channel.send(embed=discord.Embed(description=self.pages[self.page_num]))
+            await self.msg.add_reaction('\N{Left Triangle}')
+            await self.msg.add_reaction('\N{Right Triangle}')
+        except discord.errors.Forbidden:
+            self.dead = True
+
+    async def refresh(self):
+        if not self.dead:
+            await self.msg.edit(embed=discord.Embed(description=self.pages[self.page_num]))
+        # todo: attempt to remove all reactions not sent by me
+
+    async def on_reaction_add(self, reaction, user):
+        if reaction.message != self.msg or user == self.bot.user or self.dead:
+            return
+        if reaction.emoji == '\N{Left Triangle}':
+            if self.page_num > 0:
+                self.page_num -= 1
+                await self.refresh()
+        elif reaction.emoji == '\N{Right Triangle}':
+            if self.page_num < len(self.pages):
+                self.page_num += 1
+                await self.refresh()
+
+
 def json_dumps_unicode(data):
     return json.dumps(data, ensure_ascii=False)
 
@@ -138,6 +174,7 @@ class DB(commands.Cog):
         self.bot = bot
         self.bot.loop.create_task(self.connect())
         self.markov_model = None
+        self.paginators = []
 
     def cog_unload(self):
         self.bot.loop.create_task(self.disconnect())
@@ -243,13 +280,25 @@ class DB(commands.Cog):
         out = ""
         for row in res:
             print(row)
-            author = ctx.guild.get_member(row['author']).display_name
+            author = ctx.guild.get_member(row['author'])
+            author = 'Gone' if author is None else author.display_name
             emojis = " ".join(row['reactions'].keys())
             link = f'https://discordapp.com/channels/{chan.guild.id}/{chan.id}/{row["id"]}'
             out += f'\n{emojis}    [{author}]({link})'
         if len(out) > 2000:
             out = out[:2000]
         await ctx.send(embed=discord.Embed(description=out))
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        deads = []
+        for paginator in self.paginators:
+            if paginator.dead:
+                deads.append(paginator)
+            else:
+                paginator.on_reaction_add(reaction, user)
+        for paginator in deads:
+            self.paginators.remove(paginator)
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.message):
