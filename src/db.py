@@ -131,8 +131,8 @@ class Paginator(discord.ext.commands.Paginator):
     async def post(self):
         try:
             self.msg = await self.channel.send(embed=discord.Embed(description=self.pages[self.page_num]))
-            await self.msg.add_reaction('\N{Left Triangle}')
-            await self.msg.add_reaction('\N{Right Triangle}')
+            await self.msg.add_reaction('\N{BLACK LEFT-POINTING TRIANGLE}')
+            await self.msg.add_reaction('\N{BLACK RIGHT-POINTING TRIANGLE}')
         except discord.errors.Forbidden:
             self.dead = True
 
@@ -144,11 +144,11 @@ class Paginator(discord.ext.commands.Paginator):
     async def on_reaction_add(self, reaction, user):
         if reaction.message != self.msg or user == self.bot.user or self.dead:
             return
-        if reaction.emoji == '\N{Left Triangle}':
+        if reaction.emoji == '\N{BLACK LEFT-POINTING TRIANGLE}':
             if self.page_num > 0:
                 self.page_num -= 1
                 await self.refresh()
-        elif reaction.emoji == '\N{Right Triangle}':
+        elif reaction.emoji == '\N{BLACK RIGHT-POINTING TRIANGLE}':
             if self.page_num < len(self.pages):
                 self.page_num += 1
                 await self.refresh()
