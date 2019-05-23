@@ -306,8 +306,7 @@ class DB(commands.Cog):
             author = 'Gone' if author is None else author.display_name
             emojis = " ".join(emoji + ' ' + str(len(row['reactions'][emoji])) for emoji in row['reactions'])
             link = f'https://discordapp.com/channels/{channel.guild.id}/{channel.id}/{row["id"]}'
-            for i in range(40):
-                paginator.add_line(f'[{emojis} - {author}]({link})')
+            paginator.add_line(f'[{emojis} - {author}]({link})')
         self.paginators.append(paginator)
         await paginator.post()
 
