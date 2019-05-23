@@ -161,7 +161,8 @@ class Paginator(discord.ext.commands.Paginator):
         # todo: attempt to remove all reactions not sent by me
 
     async def on_reaction_add(self, reaction, user):
-        if self.msg not in self.bot.cached_messages:
+        if not discord.utils.get(self.bot.cached_messages, id=self.msg.id):
+            print('dropped from cache')
             self.dead = True
         if not self.msg or reaction.message.id != self.msg.id or user.id == self.bot.user.id or self.dead:
             return
@@ -305,7 +306,8 @@ class DB(commands.Cog):
             author = 'Gone' if author is None else author.display_name
             emojis = " ".join(emoji + ' ' + str(len(row['reactions'][emoji])) for emoji in row['reactions'])
             link = f'https://discordapp.com/channels/{channel.guild.id}/{channel.id}/{row["id"]}'
-            paginator.add_line(f'[{emojis} - {author}]({link})')
+            for i in range(40):
+                paginator.add_line(f'[{emojis} - {author}]({link})')
         self.paginators.append(paginator)
         await paginator.post()
 
