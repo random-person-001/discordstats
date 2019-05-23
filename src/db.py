@@ -139,6 +139,7 @@ class Paginator(discord.ext.commands.Paginator):
         self.embed_args = embed_kwargs
 
     def get_embed(self):
+        # todo: handle empty bodies
         if self.dynamic_footer:
             self.embed_args['footer'] = f'Page {self.page_num + 1} of {len(self.pages)}'
         print(self.embed_args)
@@ -292,7 +293,7 @@ class DB(commands.Cog):
         if not channel:
             channel = ctx.channel
         query = u" select author, reactions, id" \
-            f" from c{channel.id}" \
+            f" from cc{channel.id}" \
                 "  where reactions::json->>'\U0001F345'" \
                 "  is not null" \
                 "  order by date desc"
