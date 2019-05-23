@@ -119,6 +119,12 @@ def add_reaction_to_json(event: discord.RawReactionActionEvent, prev):
 
 
 class Paginator(discord.ext.commands.Paginator):
+    """Usage:
+    Instantiate one of these, call add_line() as wanted, then post().
+    Hold a list of these in a cog, removing them when `dead`, and passing
+    on_reaction_add event to each of these
+    """
+
     def __init__(self, bot, channel: discord.TextChannel, **embed_kwargs):
         """If the footer is empty, it will be set to like 'Page x of X'"""
         super().__init__(prefix='', suffix='', max_size=2048)
@@ -154,6 +160,8 @@ class Paginator(discord.ext.commands.Paginator):
         # todo: attempt to remove all reactions not sent by me
 
     async def on_reaction_add(self, reaction, user):
+        if self.msg not in self.bot.cached_messages:
+            self.dead = True
         if not self.msg or reaction.message.id != self.msg.id or user.id == self.bot.user.id or self.dead:
             return
         if reaction.emoji == '\N{BLACK LEFT-POINTING TRIANGLE}':
@@ -279,22 +287,24 @@ class DB(commands.Cog):
         await ctx.send('done')
 
     @commands.command()
-    async def puns(self, ctx, chan: discord.TextChannel):
+    async def puns(self, ctx, channel: discord.TextChannel = None):
         """Output a score ranking of puns"""
+        if not channel:
+            channel = ctx.channel
         query = u" select author, reactions, id" \
-            f" from c{chan.id}" \
+            f" from c{channel.id}" \
                 "  where reactions::json->>'\U0001F345'" \
-                "  is not null"
+                "  is not null" \
+                "  order by date desc"
         async with self.bot.pool.acquire() as conn:
             res = await conn.fetch(query)
-        print(res)
-        paginator = Paginator(self.bot, ctx.channel, title='Puns in #' + chan.name)
+        paginator = Paginator(self.bot, ctx.channel, title='Puns in #' + channel.name)
         for row in res:
             author = ctx.guild.get_member(row['author'])
             author = 'Gone' if author is None else author.display_name
             emojis = " ".join(emoji + ' ' + str(len(row['reactions'][emoji])) for emoji in row['reactions'])
-            link = f'https://discordapp.com/channels/{chan.guild.id}/{chan.id}/{row["id"]}'
-            paginator.add_line(f'\n[{emojis} - {author}]({link})')
+            link = f'https://discordapp.com/channels/{channel.guild.id}/{channel.id}/{row["id"]}'
+            paginator.add_line(f'[{emojis} - {author}]({link})')
         self.paginators.append(paginator)
         await paginator.post()
 
