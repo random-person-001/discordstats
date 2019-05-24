@@ -11,7 +11,7 @@ prefix = "%"
 loadingemoji = "🔄"
 
 # tell the bot to load up data.py when it starts
-extensions = ["data", "channel_listener", "reaction_listener", "apod", "db", "markov", "utilities"]
+extensions = ["data", "channel_listener", "reaction_listener", "apod", "db", "markov", "utilities", "minesweeper"]
 
 # the color gradients to use for the graphs
 # for more info and options, see https://matplotlib.org/tutorials/colors/colormaps.html

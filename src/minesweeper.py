@@ -1,10 +1,10 @@
-from discord.ext import commands
 import random
+
 import numpy as np
+from discord.ext import commands
 
 """
 A discord.py cog for playing minesweeper with spoilers.
-This is written for the rewrite branch, but could be easily adapted to be async
 
 Written by John Locke#2742 (275384719024193538) on 1 Feb 2019, released into public domain 
 """
@@ -20,14 +20,14 @@ def place_bomb(grid):
             return
 
 
-def count_adjascent_bombs(grid, x, y):
-    """Get the number of adjascent bombs (including diagonal) to a point"""
-    maxX = grid.shape[0]
-    maxY = grid.shape[1]
+def count_adjacent_bombs(grid, x, y):
+    """Get the number of adjacent bombs (including diagonal) to a point"""
+    max_x = grid.shape[0]
+    max_y = grid.shape[1]
     count = 0
     for dx in range(-1, 2):
         for dy in range(-1, 2):
-            if 0 <= x + dx < maxX and 0 <= y + dy < maxY:
+            if 0 <= x + dx < max_x and 0 <= y + dy < max_y:
                 if grid[x + dx][y + dy] == -1:
                     count += 1
     return count
@@ -43,7 +43,10 @@ def get_emoji(num):
 
 
 def stringify(grid):
-    """Get a list of discord messages representing the grid, given the data grid"""
+    """Get a list of discord message contents representing the grid, given the data grid
+    Usually there's just one element, but if the minefield is large and goes over the
+    character limit for messages, there'll be more.
+    """
     outlist = []
     out = ''
     for row in grid:
@@ -58,16 +61,16 @@ def stringify(grid):
 
 
 def make_grid(rows=7, cols=7, density=.3):
-    """Create a minesweeper data grid and return a list of messages to output in discord to display it"""
+    """Create a minesweeper data grid and return a list of message contents to post to display it"""
     grid = np.zeros((rows, cols), dtype=int)
-    minecount = int(density * grid.size)
-    for i in range(minecount):
+    mine_count = int(density * grid.size)
+    for i in range(mine_count):
         place_bomb(grid)
 
     for x in range(rows):
         for y in range(cols):
             if grid[x][y] != -1:
-                grid[x][y] = count_adjascent_bombs(grid, x, y)
+                grid[x][y] = count_adjacent_bombs(grid, x, y)
     print(grid)
     return stringify(grid)
 
@@ -96,13 +99,6 @@ class Minesweeper(commands.Cog):
         for part in strlist:
             if len(part) > 0:
                 await ctx.send(part)
-
-    @commands.command(hidden=True)
-    async def talk(self, ctx, *, msg):
-        """Hiiiiii"""
-        if ctx.message.author.id == 275384719024193538:
-            chan = ctx.bot.get_channel(391753740253921282)
-            await chan.send(msg)
 
 
 # add this as a cog to the bot
