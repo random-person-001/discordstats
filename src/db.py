@@ -138,42 +138,59 @@ class Paginator(discord.ext.commands.Paginator):
             embed_kwargs = {'footer': discord.Embed.Empty}
         self.embed_args = embed_kwargs
 
-    def get_embed(self):
-        # todo: handle empty bodies
+    def _get_embed(self):
         if self.dynamic_footer:
             self.embed_args['footer'] = f'Page {self.page_num + 1} of {len(self.pages)}'
-        print(self.embed_args)
-        return discord.Embed(description=self.pages[self.page_num],
+        if self.pages:
+            description = self.pages[self.page_num]
+        else:
+            description = 'Nothing to see here; move along'
+            self.embed_args['footer'] = discord.Embed.Empty
+        return discord.Embed(description=description,
                              **self.embed_args).set_footer(text=self.embed_args['footer'])
 
     async def post(self):
         try:
-            self.msg = await self.channel.send(embed=self.get_embed())
+            self.msg = await self.channel.send(embed=self._get_embed())
             if len(self.pages) > 1:
                 await self.msg.add_reaction('\N{BLACK LEFT-POINTING TRIANGLE}')
                 await self.msg.add_reaction('\N{BLACK RIGHT-POINTING TRIANGLE}')
         except discord.errors.Forbidden:
             self.dead = True
 
-    async def refresh(self):
+    async def _refresh(self):
         if not self.dead:
-            await self.msg.edit(embed=self.get_embed())
-        # todo: attempt to remove all reactions not sent by me
+            await self.msg.edit(embed=self._get_embed())
+            await self._clear_reactions(leave_mine=True)
+
+    async def _clear_reactions(self, leave_mine=False):
+        # the instance of self.msg we have stored will not have any reactions on it
+        cached = discord.utils.get(self.bot.cached_messages, id=self.msg.id)
+        if not cached:
+            cached = await self.msg.channel.fetch_message(self.msg.id)
+        for reaction in cached.reactions:
+            async for user in reaction.users():
+                if not (leave_mine and user.id == self.bot.user.id):
+                    try:
+                        await reaction.remove(user)
+                    except (discord.errors.Forbidden, discord.errors.NotFound, discord.errors.HTTPException):
+                        pass
 
     async def on_reaction_add(self, reaction, user):
         if not discord.utils.get(self.bot.cached_messages, id=self.msg.id):
-            print('dropped from cache')
+            print('paginator dropped from cache')
             self.dead = True
+            await self._clear_reactions()
         if not self.msg or reaction.message.id != self.msg.id or user.id == self.bot.user.id or self.dead:
             return
         if reaction.emoji == '\N{BLACK LEFT-POINTING TRIANGLE}':
             if self.page_num > 0:
                 self.page_num -= 1
-                await self.refresh()
+                await self._refresh()
         elif reaction.emoji == '\N{BLACK RIGHT-POINTING TRIANGLE}':
             if self.page_num < len(self.pages):
                 self.page_num += 1
-                await self.refresh()
+                await self._refresh()
 
 
 def json_dumps_unicode(data):
@@ -300,7 +317,7 @@ class DB(commands.Cog):
                 "  order by date desc"
         async with self.bot.pool.acquire() as conn:
             res = await conn.fetch(query)
-        paginator = Paginator(self.bot, ctx.channel, title='Puns in #' + channel.name)
+        paginator = Paginator(self.bot, ctx.channel, title='Puns in #' + channel.name, color=0x123e57)
         for row in res:
             author = ctx.guild.get_member(row['author'])
             author = 'Gone' if author is None else author.display_name
@@ -348,11 +365,13 @@ class DB(commands.Cog):
             # New messages won't have reactions, so this just returns null then
             reactions = await reactions_to_json(msg.reactions)
 
+            # edited timestamp is included in case we're logging historical messages
             try:
                 await conn.execute(f"insert into c{msg.channel.id} values "
-                                   f"($1, $2, $3, $4, 'f', NULL, $5, $6, $7)",
+                                   f"($1, $2, $3, $4, 'f', $5, $6, $7, $8)",
                                    msg.id, msg.author.id, msg.author.bot,
-                                   msg.content, attachment, embeds, reactions)
+                                   msg.content, msg.edited_at, attachment,
+                                   embeds, reactions)
             except asyncpg.exceptions.UniqueViolationError:
                 # this method is called for fetching historical records,
                 # so we occasionally fetch something already in the db
@@ -373,6 +392,9 @@ class DB(commands.Cog):
             timestamp = datetime.utcnow()
         async with self.bot.pool.acquire() as conn:
             prev = await conn.fetchrow(f'select * from c{chan_id} where id = $1', payload.message_id)
+            if not prev:
+                # the message being edited has not been recorded by us
+                return
             content = payload.data['content'] if 'content' in payload.data else prev['content']
             embed = prev['embed']
             if 'embeds' in payload.data and payload.data['embeds'] and payload.data['embeds'][0]['type'] == 'rich':
