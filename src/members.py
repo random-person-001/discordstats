@@ -37,6 +37,14 @@ def plot_as_attachment():
 class Members(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        # Graph styling
+        plt.rcParams['legend.frameon'] = False
+        plt.rcParams['figure.figsize'] = [9, 6]
+        plt.rcParams['savefig.facecolor'] = '#2C2F33'
+        plt.rcParams['axes.facecolor'] = '#2C2F33'
+        plt.rcParams['axes.labelcolor'] = '#999999'
+        plt.rcParams['xtick.color'] = '#999999'
+        plt.rcParams['ytick.color'] = '#999999'
 
     async def get_humans_data(self, guild: discord.Guild):
         """Search through all messages from Dyno responding to `serverinfo` to get human members over time"""
