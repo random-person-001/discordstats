@@ -3,6 +3,7 @@ import io
 import discord
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from discord.ext import commands
 
 
@@ -12,15 +13,30 @@ def preplot_styling():
     fig, ax = plt.subplots()
     ax.set_ylabel('Nonbot Members')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
-    #  ax.xaxis.set_major_locator(mdates.WeekdayLocator())
     for pos in ('top', 'bottom', 'left', 'right'):
         ax.spines[pos].set_visible(False)
     return fig, ax
 
 
-def postplot_styling():
+def calc_optimal(data_range, target_ticks=8):
+    """Return the size of each axis tick for data spanning `data_range`"""
+    multiples = (2, 5 / 4, 2, 2)
+    tick = 1
+    optimal_tick = -10000
+    for index in range(200):
+        if abs(target_ticks - data_range / tick) < abs(target_ticks - data_range / optimal_tick):
+            optimal_tick = tick
+        elif optimal_tick > 0:
+            return optimal_tick
+        tick *= multiples[index % 4]
+    return tick
+
+
+def postplot_styling(ax):
     """Various colorings done after plotting data, but before display"""
     # grid layout
+    tick_spacing = calc_optimal(ax.get_ylim()[1] - ax.get_ylim()[0])
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
     plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.2)
     plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.2)
     plt.tight_layout()
@@ -65,9 +81,9 @@ class Members(commands.Cog):
             results = await conn.fetch(query)
         # pprint.pprint(results)
         print('Found {} data points'.format(len(results)))
-        preplot_styling()
+        fig, ax = preplot_styling()
         plt.scatter(*zip(*results))
-        postplot_styling()
+        postplot_styling(ax)
         return plot_as_attachment()
 
     @commands.command()
