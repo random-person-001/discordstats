@@ -78,6 +78,8 @@ class Members(commands.Cog):
         return plot_as_attachment()
 
     @commands.command()
+    @commands.cooldown(2, 30)
+    @commands.guild_only()
     async def members(self, ctx):
         """Plot a graph of members over all time"""
         guild = ctx.bot.get_guild(391743485616717824)
