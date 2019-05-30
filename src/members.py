@@ -3,7 +3,7 @@ import io
 import discord
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
+import numpy as np
 from discord.ext import commands
 
 
@@ -18,25 +18,10 @@ def preplot_styling():
     return ax
 
 
-def calc_optimal(data_range, target_ticks=8):
-    """Return the size of each axis tick for data spanning `data_range`"""
-    multiples = (2, 5 / 4, 2, 2)
-    tick = 1
-    optimal_tick = -10000
-    for index in range(200):
-        if abs(target_ticks - data_range / tick) < abs(target_ticks - data_range / optimal_tick):
-            optimal_tick = tick
-        elif optimal_tick > 0:
-            return optimal_tick
-        tick *= multiples[index % 4]
-    return tick
-
-
 def postplot_styling(ax):
     """Various colorings done after plotting data, but before display"""
+    # ax.set_ylim(0, ax.get_ylim()[1]) #  don't truncate bottom
     # grid layout
-    tick_spacing = calc_optimal(ax.get_ylim()[1] - ax.get_ylim()[0])
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(tick_spacing))
     plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.2)
     plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.2)
     plt.tight_layout()
@@ -83,7 +68,11 @@ class Members(commands.Cog):
         # pprint.pprint(results)
         print('Found {} data points'.format(len(results)))
         ax = preplot_styling()
-        plt.scatter(*zip(*results))
+        dates, counts = [], np.zeros(len(results), dtype=int)
+        for result, i in zip(results, range(len(results))):
+            dates.append(result['date'])
+            counts[i] = result['members']
+        plt.scatter(dates, counts)
         plt.title(f'Membership over time for {guild.name}')
         postplot_styling(ax)
         return plot_as_attachment()
