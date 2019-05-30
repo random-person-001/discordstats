@@ -15,7 +15,7 @@ def preplot_styling():
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
     for pos in ('top', 'bottom', 'left', 'right'):
         ax.spines[pos].set_visible(False)
-    return fig, ax
+    return ax
 
 
 def calc_optimal(data_range, target_ticks=8):
@@ -59,6 +59,7 @@ class Members(commands.Cog):
         plt.rcParams['savefig.facecolor'] = '#2C2F33'
         plt.rcParams['axes.facecolor'] = '#2C2F33'
         plt.rcParams['axes.labelcolor'] = '#999999'
+        plt.rcParams['text.color'] = '#999999'
         plt.rcParams['xtick.color'] = '#999999'
         plt.rcParams['ytick.color'] = '#999999'
 
@@ -81,8 +82,9 @@ class Members(commands.Cog):
             results = await conn.fetch(query)
         # pprint.pprint(results)
         print('Found {} data points'.format(len(results)))
-        fig, ax = preplot_styling()
+        ax = preplot_styling()
         plt.scatter(*zip(*results))
+        plt.title(f'Membership over time for {guild.name}')
         postplot_styling(ax)
         return plot_as_attachment()
 
