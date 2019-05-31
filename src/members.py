@@ -35,18 +35,35 @@ def plot_as_attachment():
     return discord.File(buf, filename='members.png')
 
 
+def rc_styling():
+    """One-off stylistic settings"""
+    plt.rcParams['legend.frameon'] = False
+    plt.rcParams['figure.figsize'] = [9, 6]
+    plt.rcParams['savefig.facecolor'] = '#2C2F33'
+    plt.rcParams['axes.facecolor'] = '#2C2F33'
+    plt.rcParams['axes.labelcolor'] = '#999999'
+    plt.rcParams['text.color'] = '#999999'
+    plt.rcParams['xtick.color'] = '#999999'
+    plt.rcParams['ytick.color'] = '#999999'
+
+
+def blocking_graph(guild, results):
+    """Build a matplotlib graph of the data"""
+    ax = preplot_styling()
+    dates, counts = [], np.zeros(len(results), dtype=int)
+    for result, i in zip(results, range(len(results))):
+        dates.append(result['date'])
+        counts[i] = result['members']
+    plt.scatter(dates, counts)
+    plt.title(f'{guild.name} membership over time')
+    postplot_styling(ax)
+    return plot_as_attachment()
+
+
 class Members(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Graph styling
-        plt.rcParams['legend.frameon'] = False
-        plt.rcParams['figure.figsize'] = [9, 6]
-        plt.rcParams['savefig.facecolor'] = '#2C2F33'
-        plt.rcParams['axes.facecolor'] = '#2C2F33'
-        plt.rcParams['axes.labelcolor'] = '#999999'
-        plt.rcParams['text.color'] = '#999999'
-        plt.rcParams['xtick.color'] = '#999999'
-        plt.rcParams['ytick.color'] = '#999999'
+        rc_styling()
 
     async def get_humans_data(self, guild: discord.Guild):
         """Search through all messages from Dyno responding to `serverinfo` to get human members over time"""
@@ -67,23 +84,17 @@ class Members(commands.Cog):
             results = await conn.fetch(query)
         # pprint.pprint(results)
         print('Found {} data points'.format(len(results)))
-        ax = preplot_styling()
-        dates, counts = [], np.zeros(len(results), dtype=int)
-        for result, i in zip(results, range(len(results))):
-            dates.append(result['date'])
-            counts[i] = result['members']
-        plt.scatter(dates, counts)
-        plt.title(f'Membership over time for {guild.name}')
-        postplot_styling(ax)
-        return plot_as_attachment()
+        return await self.bot.loop.run_in_executor(None, blocking_graph, guild, results)
 
     @commands.command()
     @commands.cooldown(2, 30)
     @commands.guild_only()
-    async def members(self, ctx):
-        """Plot a graph of members over all time"""
-        guild = ctx.bot.get_guild(391743485616717824)
-        f = await self.get_humans_data(guild)
+    async def members(self, ctx, guild_id: int = None):
+        """Plot a graph of (human) members over all time
+        This works by searching through messages from Dyno as a response to ^serverinfo"""
+        if not guild_id:
+            guild_id = ctx.guild.id
+        f = await self.get_humans_data(ctx.bot.get_guild(guild_id))
         await ctx.send(file=f)
 
 
