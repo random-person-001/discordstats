@@ -68,18 +68,13 @@ class Members(commands.Cog):
     async def get_humans_data(self, guild: discord.Guild):
         """Search through all messages from Dyno responding to `serverinfo` to get human members over time"""
         dyno_id = 155149108183695360
-        # subquery returns the union of all text channels
-        subquery = '\n                   union all\n                   '.join(
-            f'select date, embed, author from cc{chan.id}' for chan in guild.text_channels)
         # query finds all messages by Dyno in response to ^serverinfo, and returns the date and Humans field
         query = """
-                select date, embed->'fields'->6->>'value' as members from (
-                   {0}
-                ) as biggah
+                select date, embed->'fields'->6->>'value' as members from gg{0}
                 where author = {1}
                 and embed->'fields'->6->>'name' = 'Humans'
                 order by date asc
-                """.format(subquery, dyno_id)
+                """.format(guild.id, dyno_id)
         async with self.bot.pool.acquire() as conn:
             results = await conn.fetch(query)
         # pprint.pprint(results)

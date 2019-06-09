@@ -234,28 +234,34 @@ class DB(commands.Cog):
         await self.bot.pool.close()
 
     async def create_chan_table(self, chan):
+        """Create a db table for a given channel.  This also updates all relevant views"""
+        if not isinstance(chan, discord.TextChannel):
+            return
         async with self.bot.pool.acquire() as conn:
-            if isinstance(chan, discord.TextChannel):
-                await conn.execute(
-                    f'CREATE TABLE IF NOT EXISTS c{chan.id} (' + '''
-                      id int8 PRIMARY KEY,
-                      author int8 NOT NULL,
-                      bot bool NOT NULL default 'f',
-                      content varchar(2000) NOT NULL,
-                      del bool NOT NULL default 'f',
-                      edited_at timestamp DEFAULT NULL,
-                      attachment varchar(500) DEFAULT NULL,
-                      embed json DEFAULT NULL,
-                      reactions json DEFAULT NULL
-                )
-                ''')
-                # we have a view (titled the same as the table, but with an extra c in front)
-                # of every table that includes the date at which the message was sent
-                await conn.execute(
-                    f' create or replace view cc{chan.id}' +
-                    '  as select *, to_timestamp(((id >> 22) + 1420070400000) / 1000) as date' +
-                    f' from c{chan.id}'
-                )
+            await conn.execute(
+                f'CREATE TABLE IF NOT EXISTS c{chan.id} (' + '''
+                  id int8 PRIMARY KEY,
+                  author int8 NOT NULL,
+                  bot bool NOT NULL default 'f',
+                  content varchar(2000) NOT NULL,
+                  del bool NOT NULL default 'f',
+                  edited_at timestamp DEFAULT NULL,
+                  attachment varchar(500) DEFAULT NULL,
+                  embed json DEFAULT NULL,
+                  reactions json DEFAULT NULL
+            )
+            ''')
+            # we have a view (titled the same as the table, but with an extra c in front)
+            # of every table that includes the date at which the message was sent
+            await conn.execute(
+                f' create or replace view cc{chan.id}' +
+                '  as select *, to_timestamp(((id >> 22) + 1420070400000) / 1000) as date' +
+                f' from c{chan.id}'
+            )
+            # update our view of all the messages in the guild
+            u = ' union all '.join(' select * from cc' + str(c.id) for c in chan.guild.text_channels)
+            print(u)
+            await conn.execute(f' create or replace view gg{chan.guild.id} as {u}')
 
     @commands.command()
     @commands.is_owner()
