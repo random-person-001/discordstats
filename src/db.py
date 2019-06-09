@@ -260,7 +260,6 @@ class DB(commands.Cog):
             )
             # update our view of all the messages in the guild
             u = ' union all '.join(' select * from cc' + str(c.id) for c in chan.guild.text_channels)
-            print(u)
             await conn.execute(f' create or replace view gg{chan.guild.id} as {u}')
 
     @commands.command()
