@@ -1,5 +1,4 @@
 import re
-from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -25,21 +24,21 @@ class Admin(commands.Cog):
     async def is_linkbot(self, message):
         """
         Test if all of the following conditions are met:
-        1) The user was created less than a day ago
-        2) The user's name matches the pattern name.name*
-        3) The user's message has a clickable link in it
-        4) This is the user's first message
-        5) The message contains any of the words 'porn' or 'naked'
+        1) The user's message has a clickable link in it
+        2) This is the user's first message
+        3) The message contains any of the words 'porn' or 'naked'
         """
-        # only analyze users less than a day old
-        if (datetime.utcnow() - message.author.created_at).days > 1:
-            return False
-        print('uh oh message sent by a new discord account')
 
-        # only analyze users with a name.name* username pattern
-        if not re.match('[a-zA-Z]+.[a-zA-Z]+', message.author.name):
+        # only analyze if the message has a nsfw tinge to it
+        bad_words = ('porn', 'naked')
+        if not any(bad_word in message.content for bad_word in bad_words):
             return False
-        print('and their name is suspicious...')
+        print('ono it has bad words')
+
+        # only analyze if the message has a clickable link in it
+        if not re.search('https?://', message.content):
+            return False
+        print('and it has a link')
 
         # only analyze if this is their first message
         # this uses the bot's local message db to reduce load and increase speed
@@ -49,17 +48,6 @@ class Admin(commands.Cog):
             if msg_count > 1:
                 return False
         print('and its like their first message')
-
-        # only analyze if the message has a clickable link in it
-        if not re.search('https?://', message.content):
-            return False
-        print('and it has a link')
-
-        # only analyze if the message has a nsfw tinge to it
-        bad_words = ('porn', 'naked')
-        if not any(bad_word in message.content for bad_word in bad_words):
-            return False
-        print('and it has bad words')
 
         return True
 
