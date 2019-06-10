@@ -30,7 +30,7 @@ class Admin(commands.Cog):
         """
 
         # only analyze if the message has a nsfw tinge to it
-        bad_words = ('porn', 'naked')
+        bad_words = ('porn', 'naked', 'nude')
         if not any(bad_word in message.content for bad_word in bad_words):
             return False
         print('ono it has bad words')
