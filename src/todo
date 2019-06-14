@@ -1,13 +1,13 @@
 **ROADMAP**
 
 Near Future
-[ ] move db.json into postgres
-[ ] migrate graph stuff to read db
+[ ] move db.json into postgres or something
+[X] migrate graph stuff to read db
 
 Next
+[ ] universal log channel for guild?
 [ ] fix x axis scaling/label issues
 [ ] increase bar graph bin size
-[ ] back-harvest a bunch of messages to put into history db
 
 later
 [ ] moar, different stats

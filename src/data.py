@@ -1,48 +1,27 @@
 import datetime
-from pprint import pprint
-
-import toml
 import io
-import os
-import sqlite3
+from typing import List
 
 import discord
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.path as mpath
-import matplotlib.dates as mdates
-import matplotlib.colors as colors
 import matplotlib.cm as cm
+import matplotlib.colors as colors
+import matplotlib.dates as mdates
+import matplotlib.path as mpath
+import matplotlib.pyplot as plt
+import numpy as np
+import toml
 from discord.ext import commands
 from scipy.ndimage.filters import gaussian_filter1d
 
 
-class Channel:
-    """Data struct for the things I care about in a channel"""
-
-    def __init__(self, name, data):
-        self.name = name
-        self.timestamps = data  # timestamps of all messages sent in last month in channel
-        self.y = None  # smoothed and binned timestamps
-        self.colormap = None
-
-
-def get_max(chans):
-    """Fetches the global maximum of a list of channels"""
-    max_y = 0
-    for channel in chans:
-        max_y = max(max_y, max(channel.y))
-    return max_y
-
-
-def get_min(chans):
-    """Fetches the global minimum of a list of channels"""
-    # since all our data is timestamps is the past,
-    # taking the timestamp of now will be greater than any values we examine
-    min_y = datetime.datetime.now().timestamp()
-    for channel in chans:
-        min_y = min(min_y, min(channel.y))
-    return min_y
+class ChannelData:
+    def __init__(self, x, y, chan):
+        self.x = x
+        self.y = y
+        self.chan = chan
+        self.count = sum(y)
+        self.max = max(y)
+        self.colormap = None  # set later
 
 
 def sync_db(bot):
@@ -60,13 +39,14 @@ def plot_as_attachment():
     return discord.File(buf, filename='channel_activity.png')
 
 
-def interpolate(x, y, steps=5):
+def interpolate(x_list: List[datetime.datetime], y_nums, steps=5):
     """Code I stole from SO:
     https://stackoverflow.com/questions/8500700/how-to-plot-a-gradient-color-line-in-matplotlib/25941474#25941474"""
-    path = mpath.Path(np.column_stack([x, y]))
+    x_nums = [x.timestamp() for x in x_list]
+    path = mpath.Path(np.column_stack([x_nums, y_nums]))
     verts = path.interpolated(steps=steps).vertices
-    x, y = verts[:, 0], verts[:, 1]
-    return x, y
+    x_nums, y_nums = verts[:, 0], verts[:, 1]
+    return [datetime.datetime.fromtimestamp(x) for x in x_nums], y_nums
 
 
 def postplot_styling(chans):
@@ -85,42 +65,33 @@ def postplot_styling(chans):
     plt.tight_layout()
 
 
-def preplot_styling(ctx, guild_id):
+def preplot_styling(earliest):
     """Configure the graph style (like the legend), before calling the plot functions"""
     # Styling
     fig, ax = plt.subplots()
     ax.set_ylabel('Messages per hour')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
     ax.xaxis.set_major_locator(mdates.WeekdayLocator())
-    # TODO - set x axis extrema from data
-    #ax.set_xlim([datetime.datetime.fromtimestamp(min(chans[0].timestamps)),
-    #             datetime.datetime.fromtimestamp(max(chans[0].timestamps))])
+    ax.set_xlim(earliest, datetime.datetime.utcnow())
     for pos in ('top', 'bottom', 'left', 'right'):
         ax.spines[pos].set_visible(False)
-    return fig, ax
 
 
-async def get_guild_id(ctx, guild_id):
+async def get_guild(ctx, guild_id):
     """Convenience method for handling no id, invalid id, and valid id from a parameter"""
-    if guild_id is None:
-        return ctx.guild.id
-    if ctx.bot.get_guild(guild_id) is not None:
-        return guild_id
-    await ctx.send("Oops that didn't look like the ID of a guild I'm in. "
-                   "Try just the command without anything after")
-    return None
+    if not guild_id:
+        return ctx.guild
+    guild = ctx.bot.get_guild(guild_id)
+    if not guild:
+        await ctx.send("Oops that didn't look like the ID of a guild I'm in. "
+                       "Try just the command without anything after")
+        return None
+    return guild
 
 
-"""Bot data cache has the following structure:
-{
-Guild id : (datetime object of start of era covered, [list of unix timestamps of messages in that channel])
-}
-"""
-
-
-def now_str():
-    """Get a filename-appropriate now-ish string"""
-    return datetime.datetime.utcnow().isoformat().replace(':', '_').replace('-', '_')
+def hours(dt: datetime.timedelta) -> int:
+    """Get total hours in a timedelta"""
+    return int(dt.total_seconds() / 3600)
 
 
 class Data(commands.Cog):
@@ -136,11 +107,6 @@ class Data(commands.Cog):
         plt.rcParams['axes.labelcolor'] = '#999999'
         plt.rcParams['xtick.color'] = '#999999'
         plt.rcParams['ytick.color'] = '#999999'
-        # message counting
-        self.conn = sqlite3.connect('channel_history.db')
-        self.last_dump_timestamp = -1
-        # message count cache
-        self.bins = dict()
 
     @commands.command(aliases=['exclude'])
     async def ignore(self, ctx, channel: discord.TextChannel):
@@ -151,7 +117,6 @@ class Data(commands.Cog):
         """
         ctx.bot.db['ACTIVITY']['excluded_channels'].append(channel.id)
         sync_db(ctx.bot)
-        await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
 
     @commands.command()
     async def unignore(self, ctx, channel: discord.TextChannel):
@@ -163,207 +128,68 @@ class Data(commands.Cog):
         if channel.id in ctx.bot.db['ACTIVITY']['excluded_channels']:
             ctx.bot.db['ACTIVITY']['excluded_channels'].remove(channel.id)
             sync_db(ctx.bot)
-            await ctx.invoke(ctx.bot.get_command('clear'), guild_id=ctx.guild.id)
         else:
             await ctx.send('That\'s already included; no need to change :thumbsup:')
 
-    @commands.command()
-    @commands.is_owner()
-    async def grab_old_data(self, ctx, guild_id: int = None):
-        """
-        Get a lot of data, and save to db
+    async def get_channel_data(self, chan: discord.TextChannel, earliest: datetime.datetime):
+        """Generate a ChannelData object for a channel"""
+        async with self.bot.pool.acquire() as conn:
+            results = await conn.fetch("  SELECT count(*), date_trunc('hour', date) AS date" +
+                                       f" FROM cc{chan.id}"
+                                       "  WHERE date > $1"
+                                       "  GROUP BY date_trunc('hour', date)"
+                                       "  ORDER BY date_trunc('hour', date) ASC", earliest)
+            raw_y = np.zeros(24 * 30)
+            for record in results:
+                raw_y[hours(record['date'] - earliest)] = record['count']
 
-        This takes a while.
-        """
-        guild_id = await get_guild_id(ctx, guild_id)
-        if not guild_id:
-            return
-        print('populating db...')
+        raw_y = gaussian_filter1d(raw_y, sigma=13)
+        raw_x = [earliest + i * datetime.timedelta(hours=1) for i in range(24 * 30)]
+        return ChannelData(raw_x, raw_y, chan)
 
-        now = datetime.datetime.utcnow()
-        begin = now - datetime.timedelta(days=60)
-        for channel in ctx.bot.get_guild(guild_id).text_channels:
-            try:
-                async for msg in channel.history(limit=None, after=begin, oldest_first=True):
-                    await self.on_message(msg)
-            except discord.errors.Forbidden:
-                pass  # silently ignore channels we don't have perms to read
-        await ctx.send("done")
-
-    @commands.command()
-    async def clear(self, ctx, guild_id: int = None):
-        """Ensure next time we graph, we'll go through channels again to get data, rather than using a cached version"""
-        guild_id = await get_guild_id(ctx, guild_id)
-        if not guild_id:
-            return
-        if guild_id in ctx.bot.mydatacache:
-            ctx.bot.mydatacache.pop(guild_id)
-        await ctx.send(":ok_hand:")
-
-    @commands.command()
-    async def get_bins(self, ctx, guild_id:int):
-        c = self.conn.cursor()
-        month_ago_timestamp = int((datetime.datetime.utcnow() - datetime.timedelta(days=2)).timestamp())
-        results = []
-        for chan in discord.utils.get(ctx.bot.guilds, id=guild_id).channels:
-            # check if table exists for this chan
-            c.execute("select name from sqlite_master where type = 'table' and name = ?", (chan.id,))
-            if c.fetchone() is not None:
-                c.execute(f"select * from '{chan.id}' where timestamp > ?", (month_ago_timestamp,))
-                r = c.fetchall()
-                if r is not None and len(r) > 0:
-                    results.append((chan.id, r))
-        print(results)
-        # order by sum of all things
-        results = sorted(results, key=lambda s: sum(s[1]))  # fixme
-        print('\n\n\n\nsorted!')
-        print(results)
-
-        # keep only the first 7ish
-        if len(results) > len(ctx.bot.config['colormaps']):
-            results = results[:len(ctx.bot.config['colormaps'])]
-
-        # return
-        return results
+    async def get_all_channel_data(self, guild: discord.Guild, start):
+        """Generate a list of the top five channel classes.  Descending order."""
+        chans = []
+        for chan in guild.text_channels:
+            if chan.id not in self.bot.db['ACTIVITY']['excluded_channels']:
+                chan_data = await self.get_channel_data(chan, start)
+                if chan_data.max > 0:
+                    chans.append(chan_data)
+        # only return the top five channels by total count.  Or, if there are less than five, all that there are.
+        n = min((5, len(chans)))
+        return sorted(chans, key=lambda c: c.count, reverse=True)[:n]
 
     @commands.command(aliases=['magic', 'line'])
-    async def pretty_graph(self, ctx, guild_id: int = None):
+    async def graph(self, ctx, guild_id: int = None):
         """Create a smooth line graph of messages per hour for popular channels"""
-        guild_id = await get_guild_id(ctx, guild_id)
-        if not guild_id:
-            return
+        duration = 29  # days
 
-        fig, ax = preplot_styling(ctx, guild_id)
-        bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
-        # first pass through data, to get smoothed values to plot
-        for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
-            y = self.get_y(chan, bins, guild_id)
-            chan.y = y
-            chan.colormap = cmap
+        guild = await get_guild(ctx, guild_id)
+        if not guild:
+            return
+        earliest = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=duration)
+        preplot_styling(earliest)
+
+        chans = await self.get_all_channel_data(guild, earliest)
+
+        for i in range(len(chans)):
+            chans[i].colormap = ctx.bot.config['colormaps'][i]
+
         # we need this so that colormaps for each series stretch to the global max, rather than the max of that series
-        global_max = get_max(chans)
+        global_max = chans[0].max
+
         # second pass through data, doing interpolation and actually plotting
         for channel in chans:
             # we graph a scatter plot not a line plot, so need to make enough points that it looks continuous
-            x, y = interpolate(bins, channel.y)
+            x, y = interpolate(channel.x, channel.y)
             # stretch the colormap; we don't use extremes cuz they ugly
             norm = colors.Normalize(vmin=-global_max / 1.5, vmax=global_max * 2.5)
             # boring conversions.  Prob a better way to do this but whatevs
-            x = [datetime.datetime.fromtimestamp(t) for t in x]
-            plt.scatter(x, y, label=channel.name, c=y, s=10, cmap=channel.colormap, norm=norm)
+            print(channel.chan.name)
+            plt.scatter(x, y, label=channel.chan.name, c=y, s=10, cmap=channel.colormap, norm=norm)
 
         postplot_styling(chans)
         await ctx.send(file=plot_as_attachment())
-
-    @commands.command(aliases=['bar'])
-    async def rawer_graph(self, ctx, guild_id: int = None):
-        """Create a bar chart of messages per hour for popular channels"""
-        guild_id = await get_guild_id(ctx, guild_id)
-        if not guild_id:
-            return
-        if guild_id not in ctx.bot.mydatacache:
-            await ctx.invoke(ctx.bot.get_command('get_data'), guild_id=guild_id)
-        else:
-            print('cache is already filled')
-
-        chans, fig, ax = preplot_styling(ctx, guild_id)
-        bins = np.linspace(min(chans[0].timestamps), max(chans[0].timestamps), int(24 * 30.5))  # leave some fudge space
-        # first pass through data, to get smoothed values to plot
-        for chan, cmap in zip(chans, ctx.bot.config['colormaps']):
-            y = self.get_y(chan, bins, guild_id, smoothing=0)
-            chan.y = y
-            chan.colormap = cmap
-        # second pass through data, doing interpolation and actually plotting
-        for channel in chans:
-            # boring conversions.  Prob a better way to do this but whatevs
-            x = [datetime.datetime.fromtimestamp(t) for t in bins]
-            plt.bar(x, channel.y, .1, label=channel.name, alpha=.3, color=cm.get_cmap(channel.colormap)(.5), )
-
-        postplot_styling(chans)
-        await ctx.send(file=plot_as_attachment())
-
-    def get_y(self, channel, bins, guild_id, smoothing=13):
-        """For data on a channel, return the smoothed, binned y values to be interpolated and graphed"""
-        y = np.zeros(len(bins))
-        begin = self.bot.mydatacache[guild_id][0].timestamp()
-        for msg_time in channel.timestamps:
-            y[int((msg_time - begin) / 3600)] += 1  # change me
-        if smoothing > 1:
-            return gaussian_filter1d(y, sigma=smoothing)
-        return y
-
-    @commands.command()
-    @commands.is_owner()
-    async def sql(self, ctx, *, query):
-        """Run an sql query"""
-        c = self.conn.cursor()
-        try:
-            response = c.execute(query).fetchall()
-        except Exception as e:
-            await ctx.send(f'Oh no!  An error! `{e}`')
-        else:
-            if not response:
-                await ctx.send('```toml\n[nothing returned]```')
-                self.conn.commit()
-            else:
-                s = "\n".join(str(t) for t in response)
-                await ctx.send(f'```json\n{s}```')
-
-    @commands.is_owner()
-    @commands.command(hidden=True)
-    async def drop_tables(self, ctx):
-        """Drops all tables in the db. Makes a backup copy of the db first."""
-        # make backup copy of db
-        os.system('cp channel_history.db channel_history.db.before_purge_' + now_str())
-        # get all table names
-        c = self.conn.cursor()
-        c.execute("""select name from sqlite_master where type = 'table';""")
-        tables = c.fetchall()
-        # delete each table individually
-        for table in tables:
-            cmd = f"drop table '{table[0]}'"
-            print(cmd)
-            c.execute(cmd)
-        self.conn.commit()
-        await ctx.send("(╯°□°）╯︵ ┻━┻")
-
-    @commands.command(hidden=True)
-    async def bins(self, ctx, *, args=None):
-        """Print out all the bins, for debugging"""
-        s = "\n".join('{}: {}'.format(k, self.bins[k]) for k in self.bins)
-        await ctx.send(f'```json\n{s}```')
-        if args is not None and 'purge' in args:
-            self.bins = dict()
-            await ctx.send("Purged.")
-
-    @commands.Cog.listener()
-    async def on_message(self, msg):
-        """Keep track of message count as messages come, by channel"""
-        # get the timestamp of the beginning of the hour the message was sent in
-        d = discord.utils.snowflake_time(msg.id)
-        last_hour = d - datetime.timedelta(minutes=d.minute, seconds=d.second, microseconds=d.microsecond)
-        timestamp = int(last_hour.timestamp())
-
-        # if message is in a new hour than recently recorded, dump all contents of self.bins into db and clear it
-        if timestamp != self.last_dump_timestamp:
-            print(f'dumping!  timestamp is {timestamp}')
-            self.last_dump_timestamp = timestamp
-            c = self.conn.cursor()
-            for chan_id in self.bins:
-                # make sure table exists
-                c.execute(f'create table if not exists \'{chan_id}\' (timestamp INTEGER, count INTEGER)')
-                # dump latest data into the table
-                c.execute(f'insert into \'{chan_id}\' values (?, ?)', (timestamp, self.bins[chan_id]))
-            # flush memory changes to disk
-            self.conn.commit()
-            # empty our cache thingy
-            self.bins = dict()
-
-        # add to memory bin
-        if not msg.author.bot:
-            if msg.channel.id not in self.bins:
-                self.bins[msg.channel.id] = 0
-            self.bins[msg.channel.id] += 1
 
 
 def setup(bot):
