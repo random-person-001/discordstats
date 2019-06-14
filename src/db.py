@@ -260,7 +260,10 @@ class DB(commands.Cog):
             )
             # update our view of all the messages in the guild
             u = ' union all '.join(' select * from cc' + str(c.id) for c in chan.guild.text_channels)
-            await conn.execute(f' create or replace view gg{chan.guild.id} as {u}')
+            try:
+                await conn.execute(f' create or replace view gg{chan.guild.id} as {u}')
+            except asyncpg.exceptions.UndefinedTableError:
+                pass
 
     @commands.command()
     @commands.is_owner()
