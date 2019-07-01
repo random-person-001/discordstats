@@ -1,3 +1,4 @@
+import datetime
 import io
 
 import discord
@@ -65,31 +66,42 @@ class Members(commands.Cog):
         self.bot = bot
         rc_styling()
 
-    async def get_humans_data(self, guild: discord.Guild):
-        """Search through all messages from Dyno responding to `serverinfo` to get human members over time"""
+    async def get_humans_data(self, guild: discord.Guild, weeks: float):
+        """Search through all messages from Dyno responding to `serverinfo` to get human members over the
+        last `weeks` (or all time if None)"""
         dyno_id = 155149108183695360
+        if not weeks or weeks < 1:
+            earliest = datetime.datetime.min
+        else:
+            earliest = datetime.datetime.utcnow() - datetime.timedelta(weeks=weeks)
+
         # query finds all messages by Dyno in response to ^serverinfo, and returns the date and Humans field
-        query = """
-                select date, embed->'fields'->6->>'value' as members from gg{0}
-                where author = {1}
+        async with self.bot.pool.acquire() as conn:
+            results = await conn.fetch(
+                f"select date, embed->'fields'->6->>'value' as members from gg{guild.id} "
+                """where author = $1
+                and date > $2
                 and embed->'fields'->6->>'name' = 'Humans'
                 order by date asc
-                """.format(guild.id, dyno_id)
-        async with self.bot.pool.acquire() as conn:
-            results = await conn.fetch(query)
+                """, dyno_id, earliest)
         # pprint.pprint(results)
-        print('Found {} data points'.format(len(results)))
+        if len(results) < 1:
+            ax = preplot_styling()
+            ax.xaxis_date()
+            plt.title(f'No data during the last {weeks} weeks')
+            return plot_as_attachment()
         return await self.bot.loop.run_in_executor(None, blocking_graph, guild, results)
 
     @commands.command()
     @commands.cooldown(2, 30)
     @commands.guild_only()
-    async def members(self, ctx, guild_id: int = None):
+    async def members(self, ctx, weeks: float = None, guild_id: int = None):
         """Plot a graph of (human) members over all time
+        If the number of weeks is not specified, it will count for all time
         This works by searching through messages from Dyno as a response to ^serverinfo"""
         if not guild_id:
             guild_id = ctx.guild.id
-        f = await self.get_humans_data(ctx.bot.get_guild(guild_id))
+        f = await self.get_humans_data(ctx.bot.get_guild(guild_id), weeks)
         await ctx.send(file=f)
 
 
