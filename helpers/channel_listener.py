@@ -1,5 +1,5 @@
-import pprint
 import asyncio
+import pprint
 import traceback
 from datetime import datetime, timedelta
 
@@ -42,10 +42,8 @@ class ChannelListener(commands.Cog):
         for guild in self.bot.guilds:
             self.chan_changes[guild.id] = []  # init stuff
         # Logging channels: a dict of server ids pointing to log channel ids
-        log_channels = {325354209673216010: 325354209673216010, 391743485616717824:568975675252408330}
         print('listener task begun')
         while True:
-            log_channels = self.bot.db['CHANNEL_REARRANGING']['log_channels']
             await asyncio.sleep(1)
             for guild in self.bot.guilds:
                 changes = self.chan_changes[guild.id] if guild.id in self.chan_changes else []
@@ -56,18 +54,20 @@ class ChannelListener(commands.Cog):
                         # wait for everything to calm down before complaining.  Don't wanna log something if ongoing
                         if (datetime.now() - latest_change) > timedelta(seconds=.3):
                             print('channels moved!')
-                            log_chan = self.bot.get_channel(log_channels[str(guild.id)])
+                            log_chan = self.bot.get_log_channel(guild.id)
                             # the `changes` list, but sorted from top to bottom as seen before the drag event
                             sorted_begins = sorted(changes, key=lambda chan: chan[1].position)
                             if len(changes) < 2:
                                 await log_chan.send('I\'m really unsure what just happened.')
                             elif sorted_begins[-1][1].position - sorted_begins[0][1].position is 1:
-                                await log_chan.send('<#{}> swapped with <#{}>'.format(changes[0][1].id, changes[1][1].id))
+                                await log_chan.send(
+                                    '<#{}> swapped with <#{}>'.format(changes[0][1].id, changes[1][1].id))
                             else:
                                 # a channel was dragged far above or far below where it was previously
 
                                 # the before and after version of the channel that someone dragged
-                                dragged_chan = [chan[1:3] for chan in changes if 1<abs(chan[1].position-chan[2].position)][0]
+                                dragged_chan = \
+                                    [chan[1:3] for chan in changes if 1 < abs(chan[1].position - chan[2].position)][0]
 
                                 # print the of the dragged channel's name (before-version, technically)
                                 print(dragged_chan[0].name)
@@ -89,7 +89,8 @@ class ChannelListener(commands.Cog):
                                             dragged_chan[0].id, end_above_chan.id))
 
                                     else:
-                                        start_after_chan = self.bot.get_guild(guild.id).text_channels[start_after_chan_pos]
+                                        start_after_chan = self.bot.get_guild(guild.id).text_channels[
+                                            start_after_chan_pos]
                                         await log_chan.send('<#{}> was dragged from after <#{}> to after <#{}>'.format(
                                             dragged_chan[0].id, start_after_chan.id, end_above_chan.id))
 
@@ -108,7 +109,7 @@ class ChannelListener(commands.Cog):
                             f.write(traceback.format_exc())
                         self.chan_changes = dict()  # needs to be cleared or we'll keep throwing the same error
                         try:
-                            log_chan = self.bot.get_channel(log_channels[str(guild.id)])
+                            log_chan = self.bot.get_log_channel(guild.id)
                             await log_chan.send("Oy, some channels moved but I had problems understanding what "
                                                 "happened.  I got an error like `{}`.".format(e))
                             ids = {chan[1].id for chan in changes}  # eliminate repeated elements by using set

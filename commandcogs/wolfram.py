@@ -63,7 +63,7 @@ class Wolfram:
 
     @commands.cooldown(rate=5, per=10)
     @commands.command(pass_context=True, hidden=True)
-    async def say(self, ctx, channelid : int, *, message):
+    async def say(self, ctx, channelid: int, *, message):
         """
         Say something in a channel
         """
@@ -139,7 +139,7 @@ class Wolfram:
                 return
             self.last_result = res
             if self.count_pods(res) > 0:
-                if "assumptions" in res: # debug stuff
+                if "assumptions" in res:  # debug stuff
                     print(res["assumptions"])
                 if "geoIP" in str(res):
                     self.messageHistory.add(await ctx.send("_(this pod has geoIP info, so has been redacted)_"))

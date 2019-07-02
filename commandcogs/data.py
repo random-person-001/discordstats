@@ -1,5 +1,6 @@
 import datetime
 import io
+import json
 from typing import List
 
 import discord
@@ -9,7 +10,6 @@ import matplotlib.dates as mdates
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 import numpy as np
-import toml
 from discord.ext import commands
 from scipy.ndimage.filters import gaussian_filter1d
 
@@ -26,9 +26,8 @@ class ChannelData:
 
 def sync_db(bot):
     """Write out the current state of the bot db to a persistent file"""
-    with open('db.toml', 'w') as f:
-        f.write('# This file was automatically generated and will be overwritten when settings are updated\n')
-        toml.dump(bot.db, f)
+    with open('db.json', 'w') as f:
+        json.dump(bot.db, f)
 
 
 def plot_as_attachment():
@@ -115,7 +114,7 @@ class Data(commands.Cog):
 
         This will clear any caches that the bot has for this guild.
         """
-        ctx.bot.db['ACTIVITY']['excluded_channels'].append(channel.id)
+        ctx.bot.db['ACTIVITY_EXCLUDED_CHANNELS'].append(channel.id)
         sync_db(ctx.bot)
 
     @commands.command()
@@ -125,8 +124,8 @@ class Data(commands.Cog):
 
         This will clear any caches that the bot has for this guild.
         """
-        if channel.id in ctx.bot.db['ACTIVITY']['excluded_channels']:
-            ctx.bot.db['ACTIVITY']['excluded_channels'].remove(channel.id)
+        if channel.id in ctx.bot.db['ACTIVITY_EXCLUDED_CHANNELS']:
+            ctx.bot.db['ACTIVITY_EXCLUDED_CHANNELS'].remove(channel.id)
             sync_db(ctx.bot)
         else:
             await ctx.send('That\'s already included; no need to change :thumbsup:')
@@ -151,7 +150,7 @@ class Data(commands.Cog):
         """Generate a list of the top five channel classes.  Descending order."""
         chans = []
         for chan in guild.text_channels:
-            if chan.id not in self.bot.db['ACTIVITY']['excluded_channels']:
+            if chan.id not in self.bot.db['ACTIVITY_EXCLUDED_CHANNELS']:
                 chan_data = await self.get_channel_data(chan, start)
                 if chan_data.max > 0:
                     chans.append(chan_data)

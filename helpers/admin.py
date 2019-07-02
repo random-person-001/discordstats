@@ -26,7 +26,7 @@ class Admin(commands.Cog):
         Test if all of the following conditions are met:
         1) The user's message has a clickable link in it
         2) This is the user's first message
-        3) The message contains any of the words 'porn' or 'naked'
+        3) The message contains any of the words 'porn', 'naked', or 'nude'
         """
 
         # only analyze if the message has a nsfw tinge to it
@@ -55,10 +55,7 @@ class Admin(commands.Cog):
         """Given that a message was sent by a linkbot, ban them, delete their message, and log it"""
         print(f'yeah ok banhammer time for {message.author}')
 
-        log_channels = self.bot.db['CHANNEL_REARRANGING']['log_channels']
-        # todo: change that to a more legit setting
-        #  ... that probably involves redoing the local settings ug
-        err_channel = self.bot.get_channel(log_channels[str(message.guild.id)])
+        err_channel = self.bot.get_log_channel(message.guild)
         try:
             await message.delete()
         except discord.errors.Forbidden:
@@ -67,7 +64,7 @@ class Admin(commands.Cog):
             banned = message.author
             await message.author.ban(reason='autodetected nsfw bot \N{Pouting Face}')
             log_channel = discord.utils.get(message.guild.channels, name='change-logs')
-            msg = f':boom::hammer:  Banned {banned.mention} cuz it was another obnoxious nsfw bot smh\n' + \
+            msg = f':boom::hammer:  I banned {banned.mention} cuz it was another obnoxious nsfw bot smh\n' + \
                   f'(aka {banned}, {banned.id})'
             await log_channel.send(msg)
         except discord.errors.Forbidden:

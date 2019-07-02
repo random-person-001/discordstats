@@ -5,7 +5,6 @@ Near Future
 [ ] moar vertical bars on channel activity graph
 
 Next
-[ ] universal log channel for guild?
 [ ] move db.json into postgres or something
 [ ] channel activity graph configurable timespan
 

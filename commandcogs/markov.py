@@ -5,10 +5,9 @@ from datetime import datetime
 from typing import Dict
 
 import discord
-from discord.ext import commands
 import markovify
 import spacy
-
+from discord.ext import commands
 
 try:
     nlp = spacy.load("en_core_web_sm")

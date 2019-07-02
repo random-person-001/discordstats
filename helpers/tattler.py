@@ -14,11 +14,8 @@ class Tattler(commands.Cog):
         # dict of (bot) members pointing to datetimes that they were last online
         self.last_onlines = []
 
-    def get_log_channel(self, guild):
-        return self.bot.db['CHANNEL_REARRANGING']['log_channels'][guild]
-
     async def log_returning(self, who: discord.Member, last_online_time: datetime.datetime):
-        chan = self.get_log_channel(who.guild)
+        chan = self.bot.get_log_channel(who.guild)
         if last_online_time:
             duration = last_online_time - datetime.datetime.utcnow()
         else:
@@ -26,7 +23,7 @@ class Tattler(commands.Cog):
         await chan.send(f'{who} is back online! (down for {duration})')
 
     async def log_leaving(self, who: discord.Member):
-        chan = self.get_log_channel(who.guild)
+        chan = self.bot.get_log_channel(who.guild)
         await chan.send(f'{who} is now offline!')
 
     @commands.Cog.listener()
@@ -47,3 +44,7 @@ class Tattler(commands.Cog):
             if new not in self.last_onlines:
                 self.last_onlines[new] = None
             await self.log_returning(new, self.last_onlines[new])
+
+
+def setup(bot):
+    bot.add_cog(Tattler(bot))
