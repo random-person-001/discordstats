@@ -175,4 +175,6 @@ class MyBot(commands.Bot):
 
     def get_log_channel(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
         """Gets the log channel for a given guild"""
-        return self.get_channel(int(self.db['LOGS'][int(guild.id)]))
+        if not isinstance(guild, int):
+            guild = guild.id
+        return self.get_channel(int(self.db['LOGS'][str(guild)]))
