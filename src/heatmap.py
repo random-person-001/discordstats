@@ -58,7 +58,7 @@ class Heatmap(commands.Cog):
 
         data = np.zeros((7, 24), int)
         for point in results:
-            data[int(point['weekday'])][int(point['hour'])] = int(point['count'])
+            data[int(6 - point['weekday'])][int(point['hour'])] = int(point['count'])
         print(data)
 
         fig, ax = preplot_styling()
