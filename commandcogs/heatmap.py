@@ -1,27 +1,9 @@
 import datetime
-import io
 
-import discord
-import matplotlib.pyplot as plt
 import numpy as np
 from discord.ext import commands
 
-
-def preplot_styling():
-    """Configure the graph style (like splines and labels), before calling the plot functions"""
-    # Styling
-    fig, ax = plt.subplots()
-    for pos in ('top', 'bottom', 'left', 'right'):
-        ax.spines[pos].set_visible(False)
-    return fig, ax
-
-
-def plot_as_attachment():
-    """Save image as file-like object and return it as an object ready to be sent in the chat"""
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    return discord.File(buf, filename='members.png')
+from helpers import graph_commons
 
 
 class Heatmap(commands.Cog):
@@ -61,12 +43,12 @@ class Heatmap(commands.Cog):
             data[int(6 - point['weekday'])][int(point['hour'])] = int(point['count'])
         print(data)
 
-        fig, ax = preplot_styling()
+        fig, ax = graph_commons.preplot_styling()
         ax.pcolor(data)
         ax.set_title('activity over time in guild')
 
         fig.tight_layout()
-        return plot_as_attachment()
+        return graph_commons.plot_as_attachment()
 
 
 def setup(bot):

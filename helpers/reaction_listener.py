@@ -16,7 +16,6 @@ class ReactionListener(commands.Cog):
         self.bot = bot
         # dict of id of message reacted to, pointing towards (time of last reaction, reaction logging message, count)
         self.log_msgs = dict()
-        self.max_age = bot.db['REACTION_MAX_AGE']  # days
 
     def cleanup(self):
         """keep self.log_msgs small"""
@@ -33,7 +32,8 @@ class ReactionListener(commands.Cog):
         self.cleanup()  # this should be called every so often
 
         # only concern ourselves with reactions to ancient posts
-        if datetime.utcnow() - discord.utils.snowflake_time(event.message_id) > timedelta(days=self.max_age):
+        max_age = self.bot.db['REACTION_MAX_AGE'][str(event.guild_id)]
+        if datetime.utcnow() - discord.utils.snowflake_time(event.message_id) > timedelta(days=max_age):
             link = f'https://discordapp.com/channels/{event.guild_id}/{event.channel_id}/{event.message_id}'
             log_chan = self.bot.get_log_channel(event.guild_id)
 

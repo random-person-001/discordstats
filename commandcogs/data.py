@@ -1,17 +1,16 @@
 import datetime
-import io
 import json
 from typing import List
 
 import discord
-import matplotlib.cm as cm
 import matplotlib.colors as colors
-import matplotlib.dates as mdates
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 import numpy as np
 from discord.ext import commands
 from scipy.ndimage.filters import gaussian_filter1d
+
+from helpers import graph_commons
 
 
 class ChannelData:
@@ -30,14 +29,6 @@ def sync_db(bot):
         json.dump(bot.db, f)
 
 
-def plot_as_attachment():
-    """save image as file-like object and return it as an object ready to be sent in the chat"""
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    return discord.File(buf, filename='channel_activity.png')
-
-
 def interpolate(x_list: List[datetime.datetime], y_nums, steps=5):
     """Code I stole from SO:
     https://stackoverflow.com/questions/8500700/how-to-plot-a-gradient-color-line-in-matplotlib/25941474#25941474"""
@@ -46,34 +37,6 @@ def interpolate(x_list: List[datetime.datetime], y_nums, steps=5):
     verts = path.interpolated(steps=steps).vertices
     x_nums, y_nums = verts[:, 0], verts[:, 1]
     return [datetime.datetime.fromtimestamp(x) for x in x_nums], y_nums
-
-
-def postplot_styling(chans):
-    """Configure the graph style, after calling any plotting functions"""
-    # legends and tweaks
-    legend = plt.legend(loc='upper left', prop={'size': 13}, handlelength=0)
-    # set legend labels to the right color
-    for text, chan in zip(legend.get_texts(), chans):
-        text.set_color(cm.get_cmap(chan.colormap)(.5))
-    # get rid of the (usually colored) dots next to the text entries in the legend
-    for item in legend.legendHandles:
-        item.set_visible(False)
-    # grid layout
-    plt.grid(True, 'major', 'x', ls=':', lw=.5, c='w', alpha=.2)
-    plt.grid(True, 'major', 'y', ls=':', lw=.5, c='w', alpha=.2)
-    plt.tight_layout()
-
-
-def preplot_styling(earliest):
-    """Configure the graph style (like the legend), before calling the plot functions"""
-    # Styling
-    fig, ax = plt.subplots()
-    ax.set_ylabel('Messages per hour')
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
-    ax.xaxis.set_major_locator(mdates.WeekdayLocator())
-    ax.set_xlim(earliest, datetime.datetime.utcnow())
-    for pos in ('top', 'bottom', 'left', 'right'):
-        ax.spines[pos].set_visible(False)
 
 
 async def get_guild(ctx, guild_id):
@@ -98,14 +61,6 @@ class Data(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # Graph styling
-        plt.rcParams['legend.frameon'] = False
-        plt.rcParams['figure.figsize'] = [9, 6]
-        plt.rcParams['savefig.facecolor'] = '#2C2F33'
-        plt.rcParams['axes.facecolor'] = '#2C2F33'
-        plt.rcParams['axes.labelcolor'] = '#999999'
-        plt.rcParams['xtick.color'] = '#999999'
-        plt.rcParams['ytick.color'] = '#999999'
 
     @commands.command(aliases=['exclude'])
     async def ignore(self, ctx, channel: discord.TextChannel):
@@ -167,7 +122,7 @@ class Data(commands.Cog):
         if not guild:
             return
         earliest = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=duration)
-        preplot_styling(earliest)
+        graph_commons.preplot_styling_dates(earliest)
 
         chans = await self.get_all_channel_data(guild, earliest)
 
@@ -187,8 +142,8 @@ class Data(commands.Cog):
             print(channel.chan.name)
             plt.scatter(x, y, label=channel.chan.name, c=y, s=10, cmap=channel.colormap, norm=norm)
 
-        postplot_styling(chans)
-        await ctx.send(file=plot_as_attachment())
+        graph_commons.postplot_styling_fancy(chans)
+        await ctx.send(file=graph_commons.plot_as_attachment())
 
 
 def setup(bot):
