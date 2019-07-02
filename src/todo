@@ -1,18 +1,20 @@
 **ROADMAP**
 
 Near Future
-[ ] move db.json into postgres or something
-[X] migrate graph stuff to read db
+[ ] channel activity graph per user
+[ ] moar vertical bars on channel activity graph
 
 Next
 [ ] universal log channel for guild?
-[ ] fix x axis scaling/label issues
-[ ] increase bar graph bin size
+[ ] move db.json into postgres or something
+[ ] channel activity graph configurable timespan
 
 later
 [ ] moar, different stats
-[ ] graphing occur in own thread (less blocking)
+  [ ] weekday/time activity heatmap
 [ ] prettier fonts?
 [ ] migrate wolfram and registration to postgres
 [ ] sample lampbot.service file?
 [ ] better documentation (less misleadingly simple)
+[ ] make w|a work again
+
