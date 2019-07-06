@@ -6,13 +6,13 @@ from discord.ext import commands
 from helpers import graph_commons
 
 
-class Heatmap(commands.Cog):
+class Activitymap(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
-    async def heatmap(self, ctx, weeks: int = None):
-        """Graph a heatmap of total server activity over a time period.
+    async def activitymap(self, ctx, weeks: int = None):
+        """Graph a activitymap of total server activity over a time period.
         If a number of weeks is not specified, it will be over all time.
         This command is unfinished.
         """
@@ -52,4 +52,4 @@ class Heatmap(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Heatmap(bot))
+    bot.add_cog(Activitymap(bot))
