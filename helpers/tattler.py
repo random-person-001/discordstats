@@ -12,12 +12,12 @@ class Tattler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         # dict of (bot) members pointing to datetimes that they were last online
-        self.last_onlines = []
+        self.last_onlines = dict()
 
     async def log_returning(self, who: discord.Member, last_online_time: datetime.datetime):
         chan = self.bot.get_log_channel(who.guild)
         if last_online_time:
-            duration = last_online_time - datetime.datetime.utcnow()
+            duration = datetime.datetime.utcnow() - last_online_time
         else:
             duration = 'idk how long really'
         await chan.send(f'{who} is back online! (down for {duration})')
@@ -37,13 +37,13 @@ class Tattler(commands.Cog):
 
         if new.status == discord.Status.offline:
             # they just dropped offline
-            self.last_onlines[new] = datetime.datetime.utcnow()
+            self.last_onlines[new.id] = datetime.datetime.utcnow()
             await self.log_leaving(new)
         else:
             # they just returned from online
-            if new not in self.last_onlines:
-                self.last_onlines[new] = None
-            await self.log_returning(new, self.last_onlines[new])
+            if new.id not in self.last_onlines:
+                self.last_onlines[new.id] = None
+            await self.log_returning(new, self.last_onlines[new.id])
 
 
 def setup(bot):
