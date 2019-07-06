@@ -18,6 +18,12 @@ extensions = ["data", "channel_listener", "reaction_listener", "apod", "db", "ma
 # the number of colormaps specified here is how many channels will be graphed
 colormaps = ["Reds_r", "YlOrBr_r", "Greens_r", "Blues_r", "Purples_r", "cividis"]
 
+# username and password to postgresql database.  It's assumed you have a database called 'discord'
+postgresuser = "postgres"
+postgrespwd = ""
+
+
+[APOD]
 # NASA API token, for APOD stuff if you want
 nasatoken = ""
 
@@ -31,9 +37,10 @@ apod_err_channel = 500896262351093761
 # the hour (local time) that the apod should be about posted at (24hr time)
 apod_post_hour = 4
 
-# username and password to postgresql database.  It's assumed you have a database called 'discord'
-postgresuser = "postgres"
-postgrespwd = ""
 
-# spreadsheet id to upload user data to
-spreadsheet = "foo-barbaz"
+[SHEETS]
+spreadsheet = "foo-barbaz"  # spreadsheet id to upload user data to
+staff = 392867548414083072  # id of Staff roll
+lowest_xp_roll = 396440356239048709  # id of the lowest xp roll
+highest_xp_roll = 529851477078835200  # id of the highest xp roll
+basic_roll = 391756481772388352  # id of basic roll

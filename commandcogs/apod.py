@@ -34,7 +34,7 @@ class Apod(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.nasa_key = self.bot.config['nasatoken']
+        self.nasa_key = self.bot.config['APOD']['nasatoken']
         self.last_checked = ''  # stringified version of when we last fetched the apod
         self.last_url = None  # url of the image we got, none if it wasn't an image
         self.last_json = None
@@ -129,8 +129,8 @@ class Apod(commands.Cog):
 
     @tasks.loop(hours=24)
     async def apod_bg(self):
-        apod_channel = self.bot.get_channel(self.bot.config['apod_channel'])
-        apod_err_channel = self.bot.get_channel(self.bot.config['apod_err_channel'])
+        apod_channel = self.bot.get_channel(self.bot.config['APOD']['apod_channel'])
+        apod_err_channel = self.bot.get_channel(self.bot.config['APOD']['apod_err_channel'])
         # noinspection PyBroadException
         try:
             embed = await self.get_embed()
@@ -158,7 +158,7 @@ class Apod(commands.Cog):
         # wait until, say 4am before beginning the task
         # (which repeats every 24 hrs after)
         now = datetime.datetime.utcnow()
-        hr = self.bot.config['apod_post_hour']
+        hr = self.bot.config['APOD']['apod_post_hour']
         if now.hour < hr:
             dt = datetime.datetime(now.year, now.month, now.day, hour=hr) - now
             print(f'waiting {dt} to start apod')
