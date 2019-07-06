@@ -12,10 +12,11 @@ def upload(data, sheet_id):
     """Uploads data to a google sheet.  Only public method."""
     arr = [[None, None, None, 'Last updated:', str(datetime.datetime.utcnow())],
            ['id', 'username', 'nicknames', 'xp roll', 'warnings', 'messages this month', 'total messages']]
-    for uid in data.members:
-        m = data.members[uid]
+    for uid in data:
+        m = data[uid]
         # we have to stringify the user id, because otherwise it goes into big E notation cuz it's a big number
-        arr.append([str(uid), m.username, m.nickname, m.xp_roll, m.warnings, m.messages_month, m.messages_total])
+        arr.append(["'" + str(uid), m.username, m.nickname, m.xp_roll, m.warnings, m.messages_month, m.messages_total])
+    print('built array')
     # pprint(arr)
 
     range_ = 'Raw!A1:M'

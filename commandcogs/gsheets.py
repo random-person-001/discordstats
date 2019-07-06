@@ -1,52 +1,10 @@
 import datetime
+from collections import namedtuple
 
 from discord.ext import commands
 
-
-class MemberData:
-    """Data holding structure for a row in a sheet"""
-
-    def __init__(self):
-        self.username = None
-        self.nickname = None
-        self.joined = None
-        self.xp_roll = None
-        self.warnings = None
-        self.messages_month = None
-        self.messages_total = None
-
-
-class Sheet:
-    """Data holding structure for everything we want to send to google sheets"""
-
-    def __init__(self):
-        self.members = dict()
-
-    def ensure_indexed(self, who):
-        if who.id not in self.members:
-            self.members[who.id] = MemberData()
-
-    def add_names(self, who, username, nickname):
-        self.ensure_indexed(who)
-        self.members[who.id].username = username
-        self.members[who.id].nickname = nickname
-
-    def add_joined(self, who, joined):
-        self.ensure_indexed(who)
-        self.members[who.id].joined = joined
-
-    def add_xp_roll(self, who, xp_roll):
-        self.ensure_indexed(who)
-        self.members[who.id].xp_roll = xp_roll
-
-    def add_messages(self, who, month, total):
-        self.ensure_indexed(who)
-        self.members[who.id].messages_month = month
-        self.members[who.id].messages_total = total
-
-    def add_warnings(self, who, count):
-        self.ensure_indexed(who)
-        self.members[who.id].warnings = count
+MemberData = namedtuple('MemberData', ('username', 'nickname', 'joined', 'xp_roll', 'warnings',
+                                       'messages_month', 'messages_total'))
 
 
 def get_xp_roll(member):
@@ -64,35 +22,32 @@ def get_xp_roll(member):
 
 async def populate(bot, guild):
     """Create and return a sheet data structure that holds all guild data."""
-    sheet = Sheet()
+    member_data = dict()
     month_ago = datetime.datetime.utcnow() - datetime.timedelta(days=30)
-    for member in guild.members:
-        if member.bot:  # ignore all bots
-            continue
-        #  print(member)
-        #  print(member.id)
 
-        async with bot.pool.acquire() as conn:
-            sheet.add_names(member, str(member), member.nickname if hasattr(member, 'nickname') else None)
+    async with bot.pool.acquire() as conn:
+        monthly = await conn.fetch(f" select author, count(*)"
+                                   f" from gg{guild.id}"
+                                   f" where date > $1"
+                                   f" group by author", month_ago)
+        totally = await conn.fetch(f" select author, count(*)"
+                                   f" from gg{guild.id}"
+                                   f" group by author")
+        for entry in totally:
+            member = guild.get_member(entry['author'])
+            if not member:  # ignore users that sent messages but left guild
+                continue
+            if member.bot:  # ignore all bots
+                continue
 
-            sheet.add_joined(member, member.joined_at)
+            month_entry = list(filter(lambda e: e.get('author') == member.id, monthly))
+            month_count = month_entry[0]['count'] if month_entry else 0
 
-            month_count = await conn.fetchval(f" select count(*) "
-                                              f" from gg{guild.id} "
-                                              f" where author = {member.id} "
-                                              f" and date > $1", month_ago)
-            total_count = await conn.fetchval(f" select count(*) "
-                                              f" from gg{guild.id} "
-                                              f" where author = {member.id} ")
-            if month_count:
-                sheet.add_messages(member, month_count, total_count)
-
-            # xp roll
-            sheet.add_xp_roll(member, get_xp_roll(member))
-
-            # warnings
-            sheet.add_warnings(member, 0)
-    return sheet
+            t = MemberData(username=str(member), nickname=member.nick, joined=member.joined_at,
+                           xp_roll=get_xp_roll(member), warnings=0, messages_month=month_count,
+                           messages_total=entry['count'])
+            member_data[member.id] = t
+    return member_data
 
 
 class Sheets(commands.Cog):
@@ -108,8 +63,10 @@ class Sheets(commands.Cog):
 
         # if not ctx.author.top_role >= ctx.guild.
         data = await populate(ctx.bot, ctx.message.guild)
+        print('populated')
 
         await ctx.bot.loop.run_in_executor(None, upload, data, ctx.bot.config['spreadsheet'])
+        print('uploaded')
         await ctx.send('done!')
 
 
