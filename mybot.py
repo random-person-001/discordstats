@@ -18,6 +18,7 @@ def dis():
 
 
 class Core(commands.Cog):
+    """Core commands, for updating source code and reloading cogs"""
     @commands.cooldown(rate=1, per=7)
     @commands.command(hidden=True)
     async def murder(self, ctx):
@@ -45,7 +46,7 @@ class Core(commands.Cog):
             await ctx.send(dis())
 
     @commands.cooldown(rate=7, per=30)
-    @commands.command()
+    @commands.command(hidden=True)
     async def load(self, ctx, extension_name: str):
         """Loads an extension."""
         if await ctx.bot.is_owner(ctx.message.author):
