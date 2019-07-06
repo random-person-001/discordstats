@@ -34,3 +34,6 @@ apod_post_hour = 4
 # username and password to postgresql database.  It's assumed you have a database called 'discord'
 postgresuser = "postgres"
 postgrespwd = ""
+
+# spreadsheet id to upload user data to
+spreadsheet = "foo-barbaz"
