@@ -27,7 +27,7 @@ class Sheets(commands.Cog):
         data = await self.populate(ctx.message.guild)
         print('populated')
 
-        await ctx.bot.loop.run_in_executor(None, upload, data, ctx.bot.config['spreadsheet'])
+        await ctx.bot.loop.run_in_executor(None, upload, data, ctx.bot.config['SHEETS']['spreadsheet'])
         print('uploaded')
         await ctx.send('done!')
 
