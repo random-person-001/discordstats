@@ -1,11 +1,12 @@
 import datetime
 from collections import namedtuple
 
+import discord
 from discord.ext import commands
 
 # the data for one row in the spreadsheet (except for the user id)
 MemberData = namedtuple('MemberData', ('username', 'nickname', 'joined', 'xp_roll', 'warnings',
-                                       'messages_month', 'messages_total'))
+                                       'messages_month', 'messages_total', 'messages_offtopic'))
 
 
 class Sheets(commands.Cog):
@@ -31,40 +32,49 @@ class Sheets(commands.Cog):
         print('uploaded')
         await ctx.send('done!')
 
-    async def populate(self, guild):
+    async def populate(self, guild: discord.Guild):
         """Create and return a sheet data structure that holds all guild data."""
         member_data = dict()
         month_ago = datetime.datetime.utcnow() - datetime.timedelta(days=30)
 
+        # build a subquery to get all the author messages in offtopic channels
+        lowest_on_topic = guild.get_channel(self.bot.config['SHEETS']['lowest_on_topic'])
+        off_topics = (chan.id for chan in guild.text_channels if chan.position > lowest_on_topic.position)
+        off_topic_subquery = ' union all '.join(f'( select author from c{id} )' for id in off_topics)
+
         async with self.bot.pool.acquire() as conn:
-            message_counts = await conn.fetch(f" select t1.author, t1.monthcount, t2.totalcount"
+            message_counts = await conn.fetch(f" select t1.author, monthly, total, offtopic"
                                               f" from ("
-                                              f"     select author, count(*) as monthcount"
+                                              f"     select author, count(*) as monthly"
                                               f"     from gg{guild.id}"
                                               f"     where date > $1"
                                               f"     group by author"
                                               f" )   as t1"
                                               f" left join ("
-                                              f"     select author, count(*) as totalcount"
+                                              f"     select author, count(*) as total"
                                               f"     from gg{guild.id}"
                                               f"     group by author"
                                               f" )   as t2"
-                                              f" on t1.author = t2.author", month_ago)
+                                              f" on t1.author = t2.author"
+                                              f" left join ("
+                                              f"     select author, count(*) as offtopic"
+                                              f"     from ( {off_topic_subquery} ) as foo"
+                                              f"     group by author"
+                                              f" ) as t3"
+                                              f" on t1.author = t3.author", month_ago)
 
             for entry in message_counts:
+                print(entry)
                 member = guild.get_member(entry['author'])
                 if not member:  # ignore users that sent messages but left guild
                     continue
                 if member.bot:  # ignore bots
                     continue
 
-                month_count = entry['monthcount']
-                if not month_count:
-                    month_count = 0
-
                 member_data[member.id] = MemberData(username=str(member), nickname=member.nick, joined=member.joined_at,
                                                     xp_roll=self.get_xp_roll(member), warnings=0,
-                                                    messages_month=month_count, messages_total=entry['totalcount'])
+                                                    messages_month=entry['monthly'], messages_total=entry['total'],
+                                                    messages_offtopic=entry['offtopic'])
         return member_data
 
     def get_xp_roll(self, member):

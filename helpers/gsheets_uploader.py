@@ -11,12 +11,13 @@ from googleapiclient.discovery import build
 def upload(data, sheet_id):
     """Uploads data to a google sheet.  Only public method."""
     arr = [[None, None, None, 'Last updated:', str(datetime.datetime.utcnow())],
-           ['id', 'username', 'nicknames', 'xp roll', 'warnings', 'joined', 'messages this month', 'total messages']]
+           ['id', 'username', 'nicknames', 'xp roll', 'warnings', 'joined', 'messages this month', 'total messages',
+            'off-topic messages']]
     for uid in data:
         m = data[uid]
         # we have to stringify the user id, because otherwise it goes into big E notation cuz it's a big number
         arr.append(["'" + str(uid), m.username, m.nickname, m.xp_roll, m.warnings, str(m.joined), m.messages_month,
-                    m.messages_total])
+                    m.messages_total, m.messages_offtopic])
     print('built array')
     # pprint(arr)
 

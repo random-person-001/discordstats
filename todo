@@ -9,6 +9,7 @@ Next
 [ ] channel activity graph configurable timespan
 
 later
+[ ] change db to be 1 table per guild instead of 1/chan
 [ ] moar, different stats
   [ ] weekday/time activity heatmap
 [ ] prettier fonts?
