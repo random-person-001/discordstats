@@ -44,3 +44,4 @@ staff = 392867548414083072  # id of Staff roll
 lowest_xp_roll = 396440356239048709  # id of the lowest xp roll
 highest_xp_roll = 529851477078835200  # id of the highest xp roll
 basic_roll = 391756481772388352  # id of basic roll
+lowest_on_topic = 448243063144448015  # id of the lowest on-topic channel in the guild

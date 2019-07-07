@@ -44,8 +44,12 @@ class Activitymap(commands.Cog):
         print(data)
 
         fig, ax = graph_commons.preplot_styling()
-        ax.pcolor(data)
+        c = ax.pcolor(data)
+
+        # ax.set_xticklabels([weekday_map[d] for d in wd])
+
         ax.set_title('activity over time in guild')
+        fig.colorbar(c, ax=ax, orientation='horizontal', drawedges=False).set_label('Total Messages per Hour')
 
         fig.tight_layout()
         return graph_commons.plot_as_attachment()
