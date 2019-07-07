@@ -52,7 +52,6 @@ class Sheets(commands.Cog):
                                               f" on t1.author = t2.author", month_ago)
 
             for entry in message_counts:
-                print(entry)
                 member = guild.get_member(entry['author'])
                 if not member:  # ignore users that sent messages but left guild
                     continue
@@ -65,8 +64,7 @@ class Sheets(commands.Cog):
 
                 member_data[member.id] = MemberData(username=str(member), nickname=member.nick, joined=member.joined_at,
                                                     xp_roll=self.get_xp_roll(member), warnings=0,
-                                                    messages_month=month_count,
-                                                    messages_total=entry['totalcount'])
+                                                    messages_month=month_count, messages_total=entry['totalcount'])
         return member_data
 
     def get_xp_roll(self, member):
