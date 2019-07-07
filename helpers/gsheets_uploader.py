@@ -9,28 +9,27 @@ from googleapiclient.discovery import build
 
 
 def upload(data, sheet_id):
-    """Uploads data to a google sheet.  Only public method."""
+    """Uploads data to a google sheet.  The only public method."""
     arr = [[None, None, None, 'Last updated:', str(datetime.datetime.utcnow())],
            ['id', 'username', 'nicknames', 'xp roll', 'warnings', 'joined', 'messages this month', 'total messages',
-            'off-topic messages']]
+            'off-topic messages', 'xp roll position']]
     for uid in data:
-        m = data[uid]
+        row = data[uid]
         # we have to stringify the user id, because otherwise it goes into big E notation cuz it's a big number
-        arr.append(["'" + str(uid), m.username, m.nickname, m.xp_roll, m.warnings, str(m.joined), m.messages_month,
-                    m.messages_total, m.messages_offtopic])
+        arr.append(("'" + str(uid),) + row)
     print('built array')
-    # pprint(arr)
 
     range_ = 'Raw!A1:M'
     service = build('sheets', 'v4', credentials=_get_creds())
 
+    # clear the current sheet contents and upload our new data over it
     sheet = service.spreadsheets()
     sheet.values().clear(spreadsheetId=sheet_id, range=range_).execute()
-    result = sheet.values().update(spreadsheetId=sheet_id,
-                                   range=range_,
-                                   valueInputOption='USER_ENTERED',
-                                   body={'values': arr}).execute()
-    pprint(result)
+    response = sheet.values().update(spreadsheetId=sheet_id,
+                                     range=range_,
+                                     valueInputOption='USER_ENTERED',
+                                     body={'values': arr}).execute()
+    pprint(response)
 
 
 def _get_creds():

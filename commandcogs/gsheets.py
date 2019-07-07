@@ -5,8 +5,8 @@ import discord
 from discord.ext import commands
 
 # the data for one row in the spreadsheet (except for the user id)
-MemberData = namedtuple('MemberData', ('username', 'nickname', 'joined', 'xp_roll', 'warnings',
-                                       'messages_month', 'messages_total', 'messages_offtopic'))
+MemberData = namedtuple('MemberData', ('username', 'nickname', 'xp_roll', 'warnings', 'joined',
+                                       'messages_month', 'messages_total', 'messages_offtopic', 'xp_roll_pos'))
 
 
 class Sheets(commands.Cog):
@@ -64,30 +64,31 @@ class Sheets(commands.Cog):
                                               f" on t1.author = t3.author", month_ago)
 
             for entry in message_counts:
-                print(entry)
                 member = guild.get_member(entry['author'])
                 if not member:  # ignore users that sent messages but left guild
                     continue
                 if member.bot:  # ignore bots
                     continue
+                xp_roll = self.get_xp_roll(member)
 
-                member_data[member.id] = MemberData(username=str(member), nickname=member.nick, joined=member.joined_at,
-                                                    xp_roll=self.get_xp_roll(member), warnings=0,
+                member_data[member.id] = MemberData(username=str(member), nickname=member.nick,
+                                                    joined=str(member.joined_at),
+                                                    xp_roll=xp_roll.name, warnings=0,
                                                     messages_month=entry['monthly'], messages_total=entry['total'],
-                                                    messages_offtopic=entry['offtopic'])
+                                                    messages_offtopic=entry['offtopic'], xp_roll_pos=xp_roll.position)
         return member_data
 
     def get_xp_roll(self, member):
-        """Get the english title of the highest xp roll that a given member has"""
+        """Get the highest xp roll that a given member has"""
         lowest = member.guild.get_role(self.bot.config['SHEETS']['lowest_xp_roll'])
         highest = member.guild.get_role(self.bot.config['SHEETS']['highest_xp_roll'])
         if not lowest or not highest:
             return 'xp rolls not found!'
         for roll in member.roles[::-1]:
             if lowest <= roll <= highest:
-                return roll.name
+                return roll
         stardust = member.guild.get_role(self.bot.config['SHEETS']['basic_roll'])
-        return stardust.name
+        return stardust
 
 
 def setup(bot):
