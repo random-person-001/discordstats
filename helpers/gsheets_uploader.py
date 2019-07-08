@@ -38,8 +38,8 @@ def _get_creds():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
+    if os.path.exists('config/sheets_token.pickle'):
+        with open('config/sheets_token.pickle', 'rb') as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -48,10 +48,10 @@ def _get_creds():
         else:
             # If modifying these scopes, delete the file token.pickle.
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', ['https://www.googleapis.com/auth/spreadsheets'])
+                'config/sheets_credentials.json', ['https://www.googleapis.com/auth/spreadsheets'])
             creds = flow.run_local_server()
         # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
+        with open('config/sheets_token.pickle', 'wb') as token:
             pickle.dump(creds, token)
 
     return creds

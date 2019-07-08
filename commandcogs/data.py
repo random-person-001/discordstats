@@ -25,7 +25,7 @@ class ChannelData:
 
 def sync_db(bot):
     """Write out the current state of the bot db to a persistent file"""
-    with open('db.json', 'w') as f:
+    with open('conf/db.json', 'w') as f:
         json.dump(bot.db, f)
 
 

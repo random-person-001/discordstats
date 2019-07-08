@@ -5,12 +5,12 @@ import os
 import discord
 import toml
 
-from mybot import MyBot
+from helpers.mybot import MyBot
 
 # set up logging
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler = logging.FileHandler(filename='logs/discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 
@@ -25,7 +25,7 @@ def write_db():
             },
             'ACTIVITY_EXCLUDED_CHANNELS': []
             }
-    with open("db.json", "w") as f:
+    with open("config/db.json", "w") as f:
         json.dump(data, f)
     return data
 
@@ -34,7 +34,7 @@ def get_db():
     """Get the persistent settings for the bot. You shouldn't need to worry about this"""
     # noinspection PyBroadException
     try:
-        with open('db.json') as f:
+        with open('config/db.json') as f:
             return json.load(f)
     except:
         return write_db()
@@ -47,7 +47,7 @@ def prep():
               "You should really run this with pipenv instead of on your system environment... see the readme.md")
         return
     try:
-        config = toml.load("config.toml")
+        config = toml.load("config/config.toml")
     except (TypeError, toml.TomlDecodeError):
         print("Oy, it looks like your `config.toml` file is incorrectly formatted")
         return
@@ -58,7 +58,7 @@ def prep():
     else:
         if not os.path.exists('logs'):  # make sure we have a place to log errors if we encounter them
             os.mkdir('logs')
-        for key in ('token', 'prefix', 'extensions', 'loadingemoji', 'colormaps'):
+        for key in ('token', 'prefix', 'extensions'):
             if key not in config:
                 print('Oof, looks like you\'re missing the entry for `{}` in the config.toml file. '
                       'Perhaps reference `exampleconfig.toml`?'.format(key))

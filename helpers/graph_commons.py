@@ -51,6 +51,7 @@ def plot_as_attachment():
     """Save image as file-like object and return it as an object ready to be sent in the chat"""
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
+    plt.close()  # plots are not closed automatically
     buf.seek(0)
     return discord.File(buf, filename='plot.png')
 
