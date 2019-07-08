@@ -1,5 +1,6 @@
 import datetime
 
+import asyncpg
 import numpy as np
 from discord.ext import commands
 
@@ -23,29 +24,33 @@ class Activitymap(commands.Cog):
 
     async def define_median(self):
         """There is no 'median' builtin command, so we'll make one of our own. From ulib_agg user-defined library."""
-        async with self.bot.pool.acquire() as conn:
-            await conn.execute("""
-                CREATE OR REPLACE FUNCTION _final_median(NUMERIC[])
-                   RETURNS NUMERIC AS
-                $$
-                   SELECT AVG(val)
-                   FROM (
-                     SELECT val
-                     FROM unnest($1) val
-                     ORDER BY 1
-                     LIMIT  2 - MOD(array_upper($1, 1), 2)
-                     OFFSET CEIL(array_upper($1, 1) / 2.0) - 1
-                   ) sub;
-                $$
-                LANGUAGE 'sql' IMMUTABLE;
-                 
-                CREATE AGGREGATE median(NUMERIC) (
-                  SFUNC=array_append,
-                  STYPE=NUMERIC[],
-                  FINALFUNC=_final_median,
-                  INITCOND='{}'
-                );    
-            """)
+        try:
+            async with self.bot.pool.acquire() as conn:
+                await conn.execute("""
+                    CREATE OR REPLACE FUNCTION _final_median(NUMERIC[])
+                       RETURNS NUMERIC AS
+                    $$
+                       SELECT AVG(val)
+                       FROM (
+                         SELECT val
+                         FROM unnest($1) val
+                         ORDER BY 1
+                         LIMIT  2 - MOD(array_upper($1, 1), 2)
+                         OFFSET CEIL(array_upper($1, 1) / 2.0) - 1
+                       ) sub;
+                    $$
+                    LANGUAGE 'sql' IMMUTABLE;
+                     
+                    CREATE AGGREGATE median(NUMERIC) (
+                      SFUNC=array_append,
+                      STYPE=NUMERIC[],
+                      FINALFUNC=_final_median,
+                      INITCOND='{}'
+                    );    
+                """)
+        except asyncpg.exceptions.DuplicateFunctionError:
+            # we only need to define it once
+            pass
 
     async def bin(self, oldest, guild_id):
         await self.define_median()
