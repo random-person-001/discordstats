@@ -220,6 +220,25 @@ class DB(commands.Cog):
             await self.create_chan_table(chan)
         await ctx.send('done')
 
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def make_warns_view(self, ctx, warns_channel: discord.TextChannel):
+        """Create a table view that has all warns.
+        This works by parsing messages from dyno and mee6 about warns."""
+        async with ctx.bot.pool.acquire() as conn:
+            await conn.execute(f'create or replace view warns{ctx.guild.id} as '
+                               ' select victim, count(*) as warns from ('
+                               " select author, ("
+                               "    SELECT regexp_matches("
+                               "        embed->'fields'->0->>'value', "
+                               "        '<@!?(\\d*)>'))[1]::int8 "
+                               "    as victim "
+                               f"FROM c{warns_channel.id}"
+                               " where embed->'author'->>'name' ilike '%warn%'"
+                               " ) as t"
+                               " group by victim")
+        await ctx.send('done')
+
     @commands.command()
     @commands.is_owner()
     async def log_back(self, ctx, chan_id: int, n: int):

@@ -43,7 +43,7 @@ class Sheets(commands.Cog):
         off_topic_subquery = ' union all '.join(f'( select author from c{id} )' for id in off_topics)
 
         async with self.bot.pool.acquire() as conn:
-            message_counts = await conn.fetch(f" select t1.author, monthly, total, offtopic"
+            message_counts = await conn.fetch(f" select t1.author, monthly, total, offtopic, warns"
                                               f" from ("
                                               f"     select author, count(*) as monthly"
                                               f"     from gg{guild.id}"
@@ -61,7 +61,10 @@ class Sheets(commands.Cog):
                                               f"     from ( {off_topic_subquery} ) as foo"
                                               f"     group by author"
                                               f" ) as t3"
-                                              f" on t1.author = t3.author", month_ago)
+                                              f" on t1.author = t3.author"
+                                              f" left join ("
+                                              f"     select victim, warns from warns{guild.id}"
+                                              f" ) as t4 on t1.author = t4.victim", month_ago)
 
             for entry in message_counts:
                 member = guild.get_member(entry['author'])
@@ -71,9 +74,11 @@ class Sheets(commands.Cog):
                     continue
                 xp_roll = self.get_xp_roll(member)
 
+                warnings = entry['warns'] if entry['warns'] else 0
+
                 member_data[member.id] = MemberData(username=str(member), nickname=member.nick,
                                                     joined=str(member.joined_at),
-                                                    xp_roll=xp_roll.name, warnings=0,
+                                                    xp_roll=xp_roll.name, warnings=warnings,
                                                     messages_month=entry['monthly'], messages_total=entry['total'],
                                                     messages_offtopic=entry['offtopic'], xp_roll_pos=xp_roll.position)
         return member_data
