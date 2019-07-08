@@ -252,6 +252,16 @@ class DB(commands.Cog):
 
     @commands.command(hidden=True)
     @commands.is_owner()
+    async def show_cache_by_channel(self, ctx):
+        msg = 'Count of cached messages for each channel:\n'
+        async with ctx.bot.pool.acquire() as conn:
+            for chan in ctx.guild.text_channels:
+                count = await conn.fetchval(f'select count(*) from c{chan.id}')
+                msg += chan.mention + str(count) + '\n'
+        await ctx.send(msg)
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
     async def drop_pg_tables(self, ctx):
         async with self.bot.pool.acquire() as conn:
             for chan in self.bot.get_all_channels():

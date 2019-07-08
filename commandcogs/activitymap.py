@@ -19,7 +19,7 @@ class Activitymap(commands.Cog):
         if not weeks or weeks < 1:
             weeks = 900
         oldest = datetime.datetime.utcnow() - datetime.timedelta(weeks=weeks)
-        f = await self.bin(oldest, 391743485616717824)
+        f = await self.bin(oldest, ctx.guild.id)
         await ctx.send(file=f)
 
     async def define_median(self):
