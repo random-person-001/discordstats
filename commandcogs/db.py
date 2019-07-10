@@ -246,9 +246,14 @@ class DB(commands.Cog):
         from a channel in our local db
         """
         chan = discord.utils.get(ctx.bot.get_all_channels(), id=chan_id)
-        async for message in chan.history(limit=n):
-            await self.on_message(message)
-        await ctx.send('done')
+        if not chan:
+            await ctx.send('channel not found sorry')
+        try:
+            async for message in chan.history(limit=n):
+                await self.on_message(message)
+            await ctx.send('done')
+        except discord.errors.Forbidden:
+            await ctx.send('_need...\nmoar...\nperms..._')
 
     @commands.command(hidden=True)
     @commands.is_owner()
@@ -256,7 +261,7 @@ class DB(commands.Cog):
         msg = 'Count of cached messages for each channel:\n'
         async with ctx.bot.pool.acquire() as conn:
             for chan in ctx.guild.text_channels:
-                count = await conn.fetchval(f'select count(*) from c{chan.id}')
+                count = await conn.fetchval(f'select count(*) from c{chan.id} where not del')
                 msg += chan.mention + str(count) + '\n'
         await ctx.send(msg)
 
