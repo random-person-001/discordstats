@@ -1,7 +1,10 @@
 import datetime
+import os
 
 import asyncpg
+import matplotlib.pyplot as plt
 import numpy as np
+from discord import File
 from discord.ext import commands
 
 from helpers import graph_commons
@@ -18,9 +21,52 @@ class Activitymap(commands.Cog):
         """
         if not weeks or weeks < 1:
             weeks = 900
-        oldest = datetime.datetime.utcnow() - datetime.timedelta(weeks=weeks)
-        f = await self.bin(oldest, ctx.guild.id)
-        await ctx.send(file=f)
+        now = datetime.datetime.utcnow()
+        oldest = now - datetime.timedelta(weeks=weeks)
+        await self.bin(oldest, now, ctx.guild.id)
+        await ctx.send(file=graph_commons.plot_as_attachment())
+
+    @commands.command()
+    async def activitygif(self, ctx, weeks: int = 26):
+        """Create a gif of channel activity activitymaps over the past many weeks.
+        Todo: make nonblocking"""
+        await ctx.send('building...')
+        guild_id = ctx.guild.id
+        now = datetime.datetime.utcnow()
+        oldest = now - datetime.timedelta(weeks=weeks)
+        # find the absolute max in the data we'll be graphing.  We do this so that all frames have the same scale.
+        async with self.bot.pool.acquire() as conn:
+            max_val = await conn.fetchval(
+                """
+                select max(median)
+                from (
+                    select median(count) as median
+                    from (
+                        select  
+                          extract(dow from date) as weekday, 
+                          extract(hour from date) as hour, 
+                          count(*) from gg{}""".format(guild_id) + """
+                        where date > $1 and
+                              date < $2
+                        group by 
+                          extract(dow from date),
+                          extract(hour from date),
+                          extract(week from date)
+                    ) t
+                    group by t.weekday, t.hour
+                ) u
+                """, oldest, now)
+        # create images for each of the gif frames
+        for i in range(weeks):
+            c, fig = await self.bin(now - datetime.timedelta(i + 1), now - datetime.timedelta(i), guild_id)
+            c.set_clim(0, max_val)
+            plt.gca().annotate(f'{i} weeks ago', xy=(10, 10), xycoords='figure pixels')
+            fig.tight_layout()
+            plt.savefig(f'tmp/activity{i}.png', format='png')
+            plt.close()
+        # use imagemagick to convert frames into a gif
+        os.system('convert -delay 20 -loop 0 tmp/*.png tmp/activity.gif')
+        await ctx.send(file=File('tmp/activity.gif'))
 
     async def define_median(self):
         """There is no 'median' builtin command, so we'll make one of our own. From ulib_agg user-defined library."""
@@ -52,7 +98,7 @@ class Activitymap(commands.Cog):
             # we only need to define it once
             pass
 
-    async def bin(self, oldest, guild_id):
+    async def bin(self, oldest, newest, guild_id):
         await self.define_median()
         # gather all data, grouped into each bin
         async with self.bot.pool.acquire() as conn:
@@ -64,14 +110,15 @@ class Activitymap(commands.Cog):
                       extract(dow from date) as weekday, 
                       extract(hour from date) as hour, 
                       count(*) from gg{}""".format(guild_id) + """
-                    where date > $1
+                    where date > $1 and
+                          date < $2
                     group by 
                       extract(dow from date), 
                       extract(hour from date),
                       extract(week from date)
                 ) t
                 group by t.weekday, t.hour
-                """, oldest)
+                """, oldest, newest)
 
         data = np.zeros((7, 24), int)
         for point in results:
@@ -93,9 +140,10 @@ class Activitymap(commands.Cog):
         ax.tick_params('both', length=0, width=1)
 
         ax.set_title('Activity at Various Times of the Week')
-        fig.colorbar(c, ax=ax, orientation='horizontal', drawedges=False).set_label('Median Messages per Hour')
+        cb = fig.colorbar(c, ax=ax, orientation='horizontal', drawedges=False)
+        cb.set_label('Median Messages per Hour')
         fig.tight_layout()
-        return graph_commons.plot_as_attachment()
+        return c, fig
 
 
 def setup(bot):
