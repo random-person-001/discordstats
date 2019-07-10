@@ -85,6 +85,9 @@ class Sheets(commands.Cog):
 
     def get_xp_roll(self, member):
         """Get the highest xp roll that a given member has"""
+        # it's assumed that there's a large contiguous block of xp rolls high up.
+        #  and there's a xp roll farther down, and then the basic roll underneath all that somewhere.
+        #  Thus we look in the config file for the endpoints of the xp block, and the other two ones.
         lowest = member.guild.get_role(self.bot.config['SHEETS']['lowest_xp_roll'])
         highest = member.guild.get_role(self.bot.config['SHEETS']['highest_xp_roll'])
         if not lowest or not highest:
@@ -92,6 +95,9 @@ class Sheets(commands.Cog):
         for roll in member.roles[::-1]:
             if lowest <= roll <= highest:
                 return roll
+        meteoroid = member.guild.get_role(self.bot.config['SHEETS']['almost_basic_roll'])
+        if meteoroid in member.roles:
+            return meteoroid
         stardust = member.guild.get_role(self.bot.config['SHEETS']['basic_roll'])
         return stardust
 

@@ -42,6 +42,11 @@ apod_post_hour = 4
 spreadsheet = "foo-barbaz"  # spreadsheet id to upload user data to
 staff = 392867548414083072  # id of Staff roll
 lowest_xp_roll = 396440356239048709  # id of the lowest xp roll
+# rolls in between these two are assumed to be just xp ones
 highest_xp_roll = 529851477078835200  # id of the highest xp roll
+almost_basic_roll = 471839310816215051  # id of xp roll just above the basic one
 basic_roll = 391756481772388352  # id of basic roll
 lowest_on_topic = 448243063144448015  # id of the lowest on-topic channel in the guild
+
+[TATTLER]
+dontlog = [302050872383242240, 212681528730189824]  # disboard and discordlisting.me

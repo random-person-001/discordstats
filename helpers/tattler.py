@@ -34,8 +34,7 @@ class Tattler(commands.Cog):
             return
         if old.status != discord.Status.offline and new.status != discord.Status.offline:
             return
-        ignorables = (302050872383242240, 212681528730189824)  # disboard and discordlisting.me)
-        if any(old.id is id for id in ignorables):
+        if any(old.id is id for id in self.bot.config['TATTLER']['dontlog']):
             return
 
         if new.status == discord.Status.offline:
