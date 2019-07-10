@@ -41,24 +41,17 @@ class Activity(commands.Cog):
         async with self.bot.pool.acquire() as conn:
             max_val = await conn.fetchval(
                 """
-                select max(median)
+                select max(count)
                 from (
-                    select median(count) as median
-                    from (
-                        select  
-                          extract(dow from date) as weekday, 
-                          extract(hour from date) as hour, 
-                          count(*) from gg{}""".format(guild_id) + """
-                        where date > $1 and
-                              date < $2
-                        group by 
-                          extract(dow from date),
-                          extract(hour from date),
-                          extract(week from date)
-                    ) t
-                    group by t.weekday, t.hour
-                ) u
-                """, oldest, now)
+                    select   
+                      count(*) from gg{}""".format(guild_id) + """
+                    where date > $1
+                    group by 
+                      extract(dow from date),
+                      extract(hour from date),
+                      extract(week from date)
+                ) t
+                """, oldest)
         # create images for each of the gif frames
         for i in range(weeks):
             c, fig = await self.bin(now - datetime.timedelta(weeks=i + 1), now - datetime.timedelta(weeks=i), guild_id)
