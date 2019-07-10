@@ -118,7 +118,7 @@ class Core(commands.Cog):
         #  Unless if the main file was changed, which cannot be reloaded,
         #  in which case the bot must be restarted.
         if new_pipfile == original_pipfile:
-            pattern = r" src/(.*).py *\| [0-9]{1,9} \+{0,}-{0,}\n"
+            pattern = r" (helpers|commandcogs)\/(.*).py *\| [0-9]{1,9} \+{0,}-{0,}\n"
             names = re.findall(pattern, pull_output)
             if not names or 'main' not in names:
                 reload_cmd = ctx.bot.get_command('reload')
