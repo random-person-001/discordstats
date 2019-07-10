@@ -10,7 +10,7 @@ from discord.ext import commands
 from helpers import graph_commons
 
 
-class Activitymap(commands.Cog):
+class Activity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -30,7 +30,10 @@ class Activitymap(commands.Cog):
     async def activitygif(self, ctx, weeks: int = 26):
         """Create a gif of channel activity activitymaps over the past many weeks.
         Todo: make nonblocking"""
-        await ctx.send('building...')
+        if weeks > 34:
+            await ctx.send("nah that looks like too much work, miss me with that")
+            return
+        status = await ctx.send('building plots...')
         guild_id = ctx.guild.id
         now = datetime.datetime.utcnow()
         oldest = now - datetime.timedelta(weeks=weeks)
@@ -62,11 +65,14 @@ class Activitymap(commands.Cog):
             c.set_clim(0, max_val)
             plt.gca().annotate(f'{i} weeks ago', xy=(10, 10), xycoords='figure pixels')
             fig.tight_layout()
-            plt.savefig(f'tmp/activity{i}.png', format='png')
+            # we save files with letter ordering instead of number, because that way they get mixed up less
+            plt.savefig(f'tmp/activity {chr(65 + weeks - 1 - i)}.png', format='png')
             plt.close()
+        await status.edit(content='creating gif...')
         # use imagemagick to convert frames into a gif
-        os.system('convert -delay 20 -loop 0 tmp/*.png tmp/activity.gif')
+        os.system('convert -delay 20 -loop 0 tmp/*.png tmp/activity.gif && rm tmp/*.png')
         await ctx.send(file=File('tmp/activity.gif'))
+        await status.edit(content='Done!')
 
     async def define_median(self):
         """There is no 'median' builtin command, so we'll make one of our own. From ulib_agg user-defined library."""
@@ -147,4 +153,4 @@ class Activitymap(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Activitymap(bot))
+    bot.add_cog(Activity(bot))
