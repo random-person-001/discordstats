@@ -27,7 +27,7 @@ class Activity(commands.Cog):
         await ctx.send(file=graph_commons.plot_as_attachment())
 
     @commands.command()
-    async def activitygif(self, ctx, weeks: int = 26):
+    async def activitygif(self, ctx, weeks: int = 26, normalize: bool = False):
         """Create a gif of channel activity activitymaps over the past many weeks.
         Todo: make nonblocking"""
         if weeks > 34:
@@ -55,7 +55,8 @@ class Activity(commands.Cog):
         # create images for each of the gif frames
         for i in range(weeks):
             c, fig = await self.bin(now - datetime.timedelta(weeks=i + 1), now - datetime.timedelta(weeks=i), guild_id)
-            c.set_clim(0, max_val)
+            if not normalize:
+                c.set_clim(0, max_val)
             plt.gca().annotate(f'{i} weeks ago', xy=(10, 10), xycoords='figure pixels')
             fig.tight_layout()
             # we save files with letter ordering instead of number, because that way they get mixed up less
@@ -106,7 +107,7 @@ class Activity(commands.Cog):
                 select t.weekday, t.hour, median(count) as median
                 from (
                     select 
-                      extract(dow from date) as weekday, 
+                      extract(dow from date)-1 as weekday, 
                       extract(hour from date) as hour, 
                       count(*) from gg{}""".format(guild_id) + """
                     where date > $1 and
@@ -121,7 +122,10 @@ class Activity(commands.Cog):
 
         data = np.zeros((7, 24), int)
         for point in results:
-            data[int(6 - point['weekday'])][int(point['hour'])] = int(point['median'])
+            if point['weekday'] == -1:  # put sunday at the end of the week
+                data[0][int(point['hour'])] = int(point['median'])
+            else:
+                data[int(6 - point['weekday'])][int(point['hour'])] = int(point['median'])
         print(data)
 
         fig, ax = graph_commons.preplot_styling()
@@ -129,7 +133,7 @@ class Activity(commands.Cog):
         ax.set_xlabel('Time of Day (UTC)')
 
         ax.set_yticks([float(n) + 0.5 for n in ax.get_yticks()])
-        ax.set_yticklabels(['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'][::-1])
+        ax.set_yticklabels(['Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun'][::-1])
 
         # Customize tick labels to be in the center of their boxes
         ax.set_xticks([0.5 + 4 * x for x in range(6)])
