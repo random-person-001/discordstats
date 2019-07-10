@@ -61,7 +61,7 @@ class Activity(commands.Cog):
                 """, oldest, now)
         # create images for each of the gif frames
         for i in range(weeks):
-            c, fig = await self.bin(now - datetime.timedelta(i + 1), now - datetime.timedelta(i), guild_id)
+            c, fig = await self.bin(now - datetime.timedelta(weeks=i + 1), now - datetime.timedelta(weeks=i), guild_id)
             c.set_clim(0, max_val)
             plt.gca().annotate(f'{i} weeks ago', xy=(10, 10), xycoords='figure pixels')
             fig.tight_layout()
@@ -70,7 +70,7 @@ class Activity(commands.Cog):
             plt.close()
         await status.edit(content='creating gif...')
         # use imagemagick to convert frames into a gif
-        os.system('convert -delay 20 -loop 0 tmp/*.png tmp/activity.gif && rm tmp/*.png')
+        os.system('convert -delay 40 -loop 0 tmp/*.png tmp/activity.gif && rm tmp/*.png')
         await ctx.send(file=File('tmp/activity.gif'))
         await status.edit(content='Done!')
 
