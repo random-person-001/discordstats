@@ -105,10 +105,11 @@ class Activity(commands.Cog):
 
         data = np.zeros((7, 24), int)
         for point in results:
+            # here we reverse the order of the days of the week to look better
             if point['weekday'] == 0:  # put sunday at the end of the week
-                data[6 - 6][int(point['hour'])] = int(point['median'])
+                data[0][int(point['hour'])] = int(point['median'])
             else:
-                data[int(6 - point['weekday']) - 1][int(point['hour'])] = int(point['median'])
+                data[int(7 - point['weekday'])][int(point['hour'])] = int(point['median'])
         print(data)
 
         fig, ax = graph_commons.preplot_styling()
