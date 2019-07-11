@@ -22,9 +22,19 @@ class Tattler(commands.Cog):
             duration = 'idk how long really'
         await chan.send(f'{who} is back online! (down for {duration})')
 
+        # tell people in verification channel that mee6 is back and they don't have to use dyno any more
+        if who.id == self.conf()['mee6']:
+            verification = self.bot.get_channel(self.conf()['verification'])
+            await verification.send("Ayyy mee6 is back; you can use !verify again :thumbsup: ")
+
     async def log_leaving(self, who: discord.Member):
         chan = self.bot.get_log_channel(who.guild)
         await chan.send(f'{who} is now offline!')
+
+        # tell people in verification that mee6's !verify won't work and to do dyno instead
+        if who.id == self.conf()['mee6']:
+            verification = self.bot.get_channel(self.conf()['verification'])
+            await verification.send("Hey looks like mee6 is down; in the meantime just use Dyno with ^verify")
 
     @commands.Cog.listener()
     async def on_member_update(self, old, new):
@@ -34,7 +44,7 @@ class Tattler(commands.Cog):
             return
         if old.status != discord.Status.offline and new.status != discord.Status.offline:
             return
-        if any(old.id is id for id in self.bot.config['TATTLER']['dontlog']):
+        if any(old.id == id for id in self.conf()['dontlog']):
             return
 
         if new.status == discord.Status.offline:
@@ -46,6 +56,10 @@ class Tattler(commands.Cog):
             if new.id not in self.last_onlines:
                 self.last_onlines[new.id] = None
             await self.log_returning(new, self.last_onlines[new.id])
+
+    def conf(self):
+        """Convenience method"""
+        return self.bot.config['TATTLER']
 
 
 def setup(bot):

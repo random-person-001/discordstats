@@ -50,3 +50,5 @@ lowest_on_topic = 448243063144448015  # id of the lowest on-topic channel in the
 
 [TATTLER]
 dontlog = [302050872383242240, 212681528730189824]  # disboard and discordlisting.me
+mee6 = 159985870458322944
+verification = 587745778320277517 # verification channel
