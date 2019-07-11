@@ -90,7 +90,7 @@ class Activity(commands.Cog):
                 select t.weekday, t.hour, median(count) as median
                 from (
                     select 
-                      extract(dow from date)-1 as weekday, 
+                      extract(dow from date) as weekday, 
                       extract(hour from date) as hour, 
                       count(*) from gg{}""".format(guild_id) + """
                     where date > $1 and
