@@ -123,7 +123,8 @@ class Core(commands.Cog):
             if not names or 'main' not in names:
                 reload_cmd = ctx.bot.get_command('reload')
                 for name in names:
-                    await ctx.invoke(reload_cmd, extension_name=name)
+                    # first subgroup is either helpers or commandcogs, which we don't care about
+                    await ctx.invoke(reload_cmd, extension_name=name[1])
                 await ctx.send('Up to date.')
                 return
 

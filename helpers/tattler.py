@@ -44,7 +44,7 @@ class Tattler(commands.Cog):
             return
         if old.status != discord.Status.offline and new.status != discord.Status.offline:
             return
-        if any(old.id == id for id in self.conf()['dontlog']):
+        if any(new.id == id_ for id_ in self.conf()['dontlog']):
             return
 
         if new.status == discord.Status.offline:
