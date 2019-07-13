@@ -57,6 +57,17 @@ class Tattler(commands.Cog):
                 self.last_onlines[new.id] = None
             await self.log_returning(new, self.last_onlines[new.id])
 
+    @commands.Cog.listener()
+    async def on_member_join(self, noob):
+        """When mee6 is down, do its job of welcoming for it"""
+        mee6 = noob.guild.get_member(self.conf()['mee6'])
+        if mee6.status != discord.Status.offline:
+            return
+        verification = self.bot.get_channel(self.conf()['verification'])
+        msg = f'Welcome {noob.mention}! Read #welcome-rules, and type "^verify" in this channel to give ' \
+            '`yourself the basic role which will let you talk in the rest of the server.'
+        await verification.send(msg)
+
     def conf(self):
         """Convenience method"""
         return self.bot.config['TATTLER']
