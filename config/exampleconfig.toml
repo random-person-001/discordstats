@@ -52,3 +52,4 @@ lowest_on_topic = 448243063144448015  # id of the lowest on-topic channel in the
 dontlog = [302050872383242240, 212681528730189824]  # disboard and discordlisting.me
 mee6 = 159985870458322944
 verification = 587745778320277517 # verification channel
+greeting_channel = 391757407493029890  # Look, a new star has been born here!

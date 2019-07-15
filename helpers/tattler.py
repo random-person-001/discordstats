@@ -38,6 +38,23 @@ class Tattler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, old, new):
+        await self.check_bot_offlines(old, new)
+        await self.check_verified(old, new)
+
+    async def check_verified(self, old, new):
+        """If mee6 is down, look for new members getting stardust and then greet them"""
+        mee6 = old.guild.get_member(self.conf()['mee6'])
+        if mee6.status != discord.Status.offline:
+            return
+        stardust = old.guild.get_role(self.bot.config['SHEETS']['basic_roll'])
+        if stardust in old.roles or stardust not in new.roles:
+            return
+        msg = f"Look, everybody! A new star has been discovered! {new.mention}! Enjoy your time looking up!"
+        chan = new.guild.get_channel(self.conf()['greeting_channel'])
+        await chan.send(msg)
+
+    async def check_bot_offlines(self, old, new):
+        """Look for bots going offline, and log them"""
         if not old.bot:
             return
         if old.status == new.status:
@@ -64,8 +81,8 @@ class Tattler(commands.Cog):
         if mee6.status != discord.Status.offline:
             return
         verification = self.bot.get_channel(self.conf()['verification'])
-        msg = f'Welcome {noob.mention}! Read #welcome-rules, and type "^verify" in this channel to give ' \
-            '`yourself the basic role which will let you talk in the rest of the server.'
+        msg = f'Welcome {noob.mention}! Read <#391765381645336577>, and type "^verify" in this channel to give ' \
+            'yourself the basic role which will let you talk in the rest of the server.'
         await verification.send(msg)
 
     def conf(self):
