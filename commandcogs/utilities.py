@@ -36,6 +36,26 @@ class Utility(commands.Cog):
         self.paginators = []
 
     @commands.command()
+    @commands.cooldown(2, 10)
+    async def trivia(self, ctx, participant: discord.Member):
+        """Toggles whether the specified member has the Trivia Participant roll.  Usable by trivia hosts and staff."""
+        participant_roll = discord.utils.get(ctx.guild.roles, name='Trivia Participant')
+        staff_roll = discord.utils.get(ctx.guild.roles, name='Staff')
+        host_roll = discord.utils.get(ctx.guild.roles, name='Trivia Host')
+        if not all(roll for roll in (participant_roll, staff_roll, host_roll)):
+            await ctx.send("Oops I couldn't find all the rolls I expected to here.  Aborting.")
+            return
+        if ctx.author.top_role < staff_roll and host_roll not in ctx.author.roles:
+            await ctx.send('ou cannot use this command!')
+            return
+        if participant_roll in participant.roles:
+            await participant.remove_roles(participant_roll)
+            await ctx.send('Removed their participant roll :thumbsup: ')
+        else:
+            await participant.add_roles(participant_roll)
+            await ctx.send('Gave them participant roll :thumbsup: ')
+
+    @commands.command()
     async def time(self, ctx, discord_id: int):
         """Extract the utc timestamp that a discord object with the given id was created"""
         await ctx.send(discord.utils.snowflake_time(discord_id))
