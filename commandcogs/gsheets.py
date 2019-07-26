@@ -48,6 +48,7 @@ class Sheets(commands.Cog):
                                               f"     select author, count(*) as monthly"
                                               f"     from gg{guild.id}"
                                               f"     where date > $1"
+                                              f"     and not del"
                                               f"     group by author"
                                               f" )   as t1"
                                               f" left join ("
