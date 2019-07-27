@@ -40,7 +40,7 @@ class Sheets(commands.Cog):
         # build a subquery to get all the author messages in offtopic channels
         lowest_on_topic = guild.get_channel(self.bot.config['SHEETS']['lowest_on_topic'])
         off_topics = (chan.id for chan in guild.text_channels if chan.position > lowest_on_topic.position)
-        off_topic_subquery = ' union all '.join(f'( select author from c{id} )' for id in off_topics)
+        off_topic_subquery = ' union all '.join(f'( select author, del from c{id} )' for id in off_topics)
 
         async with self.bot.pool.acquire() as conn:
             message_counts = await conn.fetch(f" select t1.author, monthly, total, offtopic, warns"
