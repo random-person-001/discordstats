@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 
 # the data for one row in the spreadsheet (except for the user id)
-MemberData = namedtuple('MemberData', ('username', 'nickname', 'xp_roll', 'warnings', 'joined',
+MemberData = namedtuple('MemberData', ('username', 'nickname', 'xp_roll', 'warnings', 'joined', 'earliest',
                                        'messages_month', 'messages_total', 'messages_offtopic', 'xp_roll_pos'))
 
 
@@ -43,7 +43,7 @@ class Sheets(commands.Cog):
         off_topic_subquery = ' union all '.join(f'( select author, del from c{id} )' for id in off_topics)
 
         async with self.bot.pool.acquire() as conn:
-            message_counts = await conn.fetch(f" select t1.author, monthly, total, offtopic, warns"
+            message_counts = await conn.fetch(f" select t1.author, monthly, total, offtopic, warns, earliest_msg"
                                               f" from ("
                                               f"     select author, count(*) as monthly"
                                               f"     from gg{guild.id}"
@@ -67,7 +67,14 @@ class Sheets(commands.Cog):
                                               f" on t1.author = t3.author"
                                               f" left join ("
                                               f"     select victim, warns from warns{guild.id}"
-                                              f" ) as t4 on t1.author = t4.victim", month_ago)
+                                              f" ) as t4 "
+                                              f" on t1.author = t4.victim"
+                                              f" left join ("
+                                              f"     select author, min(date) as earliest_msg"
+                                              f"     from gg{guild.id}"
+                                              f"     group by author"
+                                              f" ) as t5"
+                                              f" on t1.author = t5.author", month_ago)
 
             for entry in message_counts:
                 member = guild.get_member(entry['author'])
@@ -81,6 +88,7 @@ class Sheets(commands.Cog):
 
                 member_data[member.id] = MemberData(username=str(member), nickname=member.nick,
                                                     joined=str(member.joined_at),
+                                                    earliest=str(entry['earliest_msg'])[:-6],
                                                     xp_roll=xp_roll.name, warnings=warnings,
                                                     messages_month=entry['monthly'], messages_total=entry['total'],
                                                     messages_offtopic=entry['offtopic'], xp_roll_pos=xp_roll.position)

@@ -69,6 +69,18 @@ def prep():
 config = prep()
 bot = MyBot(config)
 
+
+@bot.event
+async def on_resume():
+    game = discord.Game("God with the universe")
+    await bot.change_presence(status=discord.Status.dnd, activity=game)
+
+
+@bot.event
+async def on_ready():
+    await on_resume()
+
+
 if __name__ == '__main__':
     if config:
         bot.set_db_struct(get_db())  # load the db file. User doesn't have to touch this

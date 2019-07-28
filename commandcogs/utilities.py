@@ -46,7 +46,7 @@ class Utility(commands.Cog):
             await ctx.send("Oops I couldn't find all the rolls I expected to here.  Aborting.")
             return
         if ctx.author.top_role < staff_roll and host_roll not in ctx.author.roles:
-            await ctx.send('ou cannot use this command!')
+            await ctx.send('You cannot use this command!')
             return
         if participant_roll in participant.roles:
             await participant.remove_roles(participant_roll)
