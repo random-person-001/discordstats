@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 import asyncpg
@@ -254,6 +254,22 @@ class DB(commands.Cog):
             await ctx.send('done')
         except discord.errors.Forbidden:
             await ctx.send('_need...\nmoar...\nperms..._')
+
+    @commands.command()
+    @commands.is_owner()
+    async def much_downtime(self, ctx, days):
+        """Ensure we have all messages in the last `n` days sent
+        in our local db
+        """
+        oldest = datetime.utcnow() - timedelta(days=days)
+        for chan in ctx.bot.get_all_channels():
+            try:
+                async for message in chan.history(after=oldest):
+                    await self.on_message(message)
+                print(f"Logged {days} days of #{chan.name}")
+            except discord.errors.Forbidden:
+                pass
+        await ctx.send("All caught up!")
 
     @commands.command(hidden=True)
     @commands.is_owner()
