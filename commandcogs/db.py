@@ -257,18 +257,19 @@ class DB(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
-    async def much_downtime(self, ctx, days):
+    async def much_downtime(self, ctx, days: float):
         """Ensure we have all messages in the last `n` days sent
         in our local db
         """
         oldest = datetime.utcnow() - timedelta(days=days)
-        for chan in ctx.bot.get_all_channels():
-            try:
-                async for message in chan.history(after=oldest):
-                    await self.on_message(message)
-                print(f"Logged {days} days of #{chan.name}")
-            except discord.errors.Forbidden:
-                pass
+        for guild in ctx.bot.guilds:
+            for chan in guild.text_channels:
+                try:
+                    async for message in chan.history(after=oldest):
+                        await self.on_message(message)
+                    print(f"Logged {days} days of #{chan.name}")
+                except discord.errors.Forbidden:
+                    pass
         await ctx.send("All caught up!")
 
     @commands.command(hidden=True)
