@@ -44,7 +44,7 @@ class Tattler(commands.Cog):
     async def check_verified(self, old, new):
         """If mee6 is down, look for new members getting stardust and then greet them"""
         mee6 = old.guild.get_member(self.conf()['mee6'])
-        if mee6.status != discord.Status.offline:
+        if not mee6 or mee6.status != discord.Status.offline:
             return
         stardust = old.guild.get_role(self.bot.config['SHEETS']['basic_roll'])
         if stardust in old.roles or stardust not in new.roles:
