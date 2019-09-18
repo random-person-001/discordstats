@@ -147,20 +147,16 @@ class Data(commands.Cog):
         await ctx.send(file=graph_commons.plot_as_attachment())
 
     @commands.command()
-    async def scatter(self, ctx, guild_id: int = None):
+    async def scatter(self, ctx, weeks: float = 4):
         """Create a scatter plot of messages per hour for popular channels"""
-        duration = 29  # days
-
-        guild = await get_guild(ctx, guild_id)
-        if not guild:
-            return
+        duration = weeks * 7  # days
         earliest = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=duration)
         graph_commons.preplot_styling_dates(earliest)
 
-        chans = await self.get_all_channel_data(guild, earliest, smoothing=0)
+        chans = await self.get_all_channel_data(ctx.guild, earliest, smoothing=0)
 
         for i in range(len(chans)):
-            chans[i].colormap = ctx.bot.config['colormaps'][i]
+            chans[i].colormap = ctx.bot.config['colormaps'][len(chans) - i]
 
         # we need this so that colormaps for each series stretch to the global max, rather than the max of that series
         global_max = chans[0].max
@@ -168,7 +164,7 @@ class Data(commands.Cog):
         # second pass through data, doing interpolation and actually plotting
         for channel in chans:
             # stretch the colormap; we don't use extremes cuz they ugly
-            norm = colors.Normalize(vmin=-global_max / 1.5, vmax=global_max * 2.5)
+            norm = colors.Normalize(vmin=-global_max / 2.5, vmax=global_max * 1.5)
             # boring conversions.  Prob a better way to do this but whatevs
             print(channel.chan.name)
             plt.scatter(channel.x, channel.y, label=channel.chan.name, c=channel.y, s=10, cmap=channel.colormap,
