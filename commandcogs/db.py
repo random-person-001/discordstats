@@ -269,7 +269,7 @@ class DB(commands.Cog):
                         await self.on_message(message)
                     print(f"Logged {days} days of #{chan.name}")
                 except discord.errors.Forbidden:
-                    pass
+                    print(f"Can't see history of #{chan.name}")
         await ctx.send("All caught up!")
 
     @commands.command(hidden=True)

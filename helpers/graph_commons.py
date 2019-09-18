@@ -40,7 +40,6 @@ def preplot_styling_dates(earliest):
 
 def preplot_styling():
     """Configure the graph style (like splines and labels), before calling the plot functions"""
-    # Styling
     fig, ax = plt.subplots()
     for pos in ('top', 'bottom', 'left', 'right'):
         ax.spines[pos].set_visible(False)
