@@ -98,6 +98,27 @@ class Utility(commands.Cog):
         await p.post()
 
     @commands.command()
+    async def members_with(self, ctx, roll: discord.Role):
+        """List the nicknames (rather than mentions) of all members with a roll"""
+        gang = []
+        for member in ctx.guild.members:
+            if roll in member.roles:
+                gang.append(member)
+        e = discord.Embed(title=f"{len(gang)} members with **{roll.name}** roll:", color=0x004a92)
+        # description="\n".join(member.display_name for member in gang))
+        while gang:
+            temp = ""
+            for i in range(10):
+                if gang:
+                    temp += gang.pop(-1).display_name + "\n"
+                if not gang:
+                    e.add_field(name='_ _', value=temp)
+                    break
+            if gang:
+                e.add_field(name='_ _', value=temp)
+        await ctx.send(embed=e)
+
+    @commands.command()
     async def info(self, ctx):
         """Who am I?  What am I doing here?  Where shall I get lunch?"""
         libs = 'Built with the help of the following packages: '
