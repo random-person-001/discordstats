@@ -265,7 +265,7 @@ class DB(commands.Cog):
         for guild in ctx.bot.guilds:
             for chan in guild.text_channels:
                 try:
-                    async for message in chan.history(after=oldest):
+                    async for message in chan.history(after=oldest, limit=None):
                         await self.on_message(message)
                     print(f"Logged {days} days of #{chan.name}")
                 except discord.errors.Forbidden:
