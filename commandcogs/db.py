@@ -241,6 +241,32 @@ class DB(commands.Cog):
 
     @commands.command()
     @commands.is_owner()
+    async def avg_warns(self, ctx):
+        """Calculate the average warns for each xp level"""
+        import collections
+        xp_levels = collections.OrderedDict(
+            zip(('Stardust', 'Meteoroid', 'Asteroid', 'Dwarf Planet', 'Rocky Planet', 'Gas Giant', 'Brown Dwarf',
+                 'Main Sequence Star', 'Giant Star', 'Supergiant Star', 'Open Cluster', 'Globular Cluster'),
+                [[0, 0]] * 13
+                ))
+        table_name = f'warns{ctx.guild.id}'
+        xp_rolls = [discord.utils.get(ctx.guild.roles, name=level) for level in xp_levels]
+        async with ctx.bot.pool.acquire() as conn:
+            for member in ctx.guild.members:
+                # get how many warns they have
+                warns = await conn.fetchval(f'select warns from {table_name} where victim = {member.id}')
+                # incrament xp roll count
+                for roll in xp_rolls:
+                    if roll in member.roles:
+                        xp_levels[roll.name][1] += 1
+                        if warns:
+                            xp_levels[roll.name][0] += warns
+                        break
+            print(xp_levels)
+            await ctx.send('\n'.join([f'{level}: \t {xp_levels[level]}' for level in xp_levels]))
+
+    @commands.command()
+    @commands.is_owner()
     async def log_back(self, ctx, chan_id: int, n: int):
         """Ensure we have the last `n` messages sent
         from a channel in our local db
@@ -255,14 +281,16 @@ class DB(commands.Cog):
         except discord.errors.Forbidden:
             await ctx.send('_need...\nmoar...\nperms..._')
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.is_owner()
-    async def much_downtime(self, ctx, days: float):
+    async def much_downtime(self, ctx, days: float, guild: int = None):
         """Ensure we have all messages in the last `n` days sent
         in our local db
+        if no guild id is specified, it will go through all guilds.
         """
         oldest = datetime.utcnow() - timedelta(days=days)
-        for guild in ctx.bot.guilds:
+        guilds = [guild] if guild else ctx.bot.guilds
+        for guild in guilds:
             for chan in guild.text_channels:
                 try:
                     async for message in chan.history(after=oldest, limit=None):
