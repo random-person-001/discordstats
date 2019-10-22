@@ -289,7 +289,7 @@ class DB(commands.Cog):
         if no guild id is specified, it will go through all guilds.
         """
         oldest = datetime.utcnow() - timedelta(days=days)
-        guilds = [guild] if guild else ctx.bot.guilds
+        guilds = [ctx.bot.get_guild(guild)] if guild else ctx.bot.guilds
         for guild in guilds:
             for chan in guild.text_channels:
                 try:
