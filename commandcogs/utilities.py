@@ -180,6 +180,14 @@ class Utility(commands.Cog):
         for paginator in deads:
             self.paginators.remove(paginator)
 
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def bug(self, ctx):
+        """Bug someone to do stuff"""
+        bug = ctx.bot.get_user(303770703692562432)
+        await bug.send("This is your daily reminder to send Locke stuff :+1:")
+        await ctx.send("done")
+
 
 def setup(bot):
     bot.add_cog(Utility(bot))
