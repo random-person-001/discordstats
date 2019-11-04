@@ -52,13 +52,22 @@ class Members(commands.Cog):
                 and embed->'fields'->6->>'name' = 'Humans'
                 order by date asc
                 """, dyno_id, earliest)
-        # pprint.pprint(results)
+        self.tabulate(results)
         if len(results) < 1:
             ax = preplot_styling()
             ax.xaxis_date()
             plt.title(f'No data during the last {weeks} weeks')
             return graph_commons.plot_as_attachment()
         return await self.bot.loop.run_in_executor(None, blocking_graph, guild, results)
+
+    def tabulate(self, results):
+        """Print out the "results" as a nice tabulated thing to a text file"""
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        seconds_per_day = 24 * 60 * 60
+        with open('tmp/members.txt', 'w') as f:
+            for record in results:
+                age = now - record['date']
+                f.write(f'{age.total_seconds() / seconds_per_day}\t{record["members"]}\n')
 
     @commands.command()
     @commands.cooldown(2, 30)
