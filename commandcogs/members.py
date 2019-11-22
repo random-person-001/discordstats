@@ -65,9 +65,10 @@ class Members(commands.Cog):
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         seconds_per_day = 24 * 60 * 60
         with open('tmp/members.txt', 'w') as f:
+            f.write('Days from now\tHuman Count\n')
             for record in results:
                 age = now - record['date']
-                f.write(f'{age.total_seconds() / seconds_per_day}\t{record["members"]}\n')
+                f.write(f'{-age.total_seconds() / seconds_per_day}\t{record["members"]}\n')
 
     @commands.command()
     @commands.cooldown(2, 30)
