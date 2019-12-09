@@ -15,7 +15,6 @@ class InviteWacher(commands.Cog):
 
     async def log(self, invite_code, msg):
         chan = self.bot.get_log_channel(msg.guild.id)
-        changes = self.bot.get_channel(401172732856762370)
         try:
             invite = await self.bot.fetch_invite(invite_code)
         except discord.NotFound:
@@ -37,13 +36,7 @@ class InviteWacher(commands.Cog):
         except discord.Forbidden:
             await chan.send("(I wouldda deleted it but I was just hiding my powers)")
         else:
-            await changes.send(f'- deleted an invite by {msg.author} in {msg.channel.mention}')
-
-        staff_bot_room = self.bot.get_channel(395649976048287758)
-        welcome_rules = self.bot.get_channel(391765381645336577)
-        retort = await msg.channel.send(f'Hey {msg.author.mention} please note that the rules here don\'t '
-                                        f'allow posting invites. It may serve you well to review {welcome_rules.mention} again.')
-        await staff_bot_room.send(f'hey yo please warn user {msg.author.id} - {retort.jump_url}')
+            await chan.send(f'- deleted an invite by {msg.author} in {msg.channel.mention}')
 
     @commands.Cog.listener()
     async def on_message(self, msg):
