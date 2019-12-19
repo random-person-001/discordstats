@@ -1,4 +1,5 @@
 import platform
+import random
 import subprocess
 import traceback
 from datetime import datetime, timedelta
@@ -187,6 +188,89 @@ class Utility(commands.Cog):
         bug = ctx.bot.get_user(303770703692562432)
         await bug.send("This is your daily reminder to send Locke stuff :+1:")
         await ctx.send("done")
+
+    @commands.cooldown(4, 15)
+    @commands.command()
+    async def starwars(self, ctx):
+        """Spoiler for the star wars movie!"""
+        if ctx.channel.name != 'bot-commands-room':
+            await ctx.send('Oops, let\'s head over to the bot room to do this instead of here')
+            return
+        s = "In this Star Wars movie, our heroes return to take on the First Order and new villain "
+        s += random.choice((
+            'Kyle Ren',
+            'Malloc',
+            'Darth Sebelius',
+            'Theranos',
+            'Lord Juul'
+        ))
+
+        s += ' with help from their new friend ' + random.choice((
+            'Kim Spacemeasurer',
+            'Teen Yoda',
+            'Dab Tweetdeck',
+            'Yaz Progestin',
+            'TI-83'
+        ))
+
+        s += '. Rey builds a new lightsaber with a ' + random.choice((
+            'beige',
+            'ochre',
+            'mauve',
+            'aquamarine',
+            'taupe'
+        ))
+
+        s += ' blade, and they head out to confront the First Order\'s new superweapon, the '
+        s += random.choice((
+            'Sun Obliterator',
+            'Moonsquisher',
+            'World Eater',
+            'Planet Zester',
+            'Superconducting Supercollider'
+        ))
+
+        s += ', a space station capable of ' + random.choice((
+            'blowing up a planet with a bunch of beams of energy that combine into one',
+            'blowing up a bunch of planets with one beam of energy that splits into many',
+            'cutting a planet in half and smashing the halves together like two cymbals',
+            'increasing the CO2 levels in a planet\'s atmosphere, causing rapid heating',
+            'triggering the end credits before the movie is done'
+        ))
+
+        s += '. They unexpectedly join forces with their old enemy, ' + random.choice((
+            'Boba Fett',
+            'Salacious Crumb',
+            'the Space Slug',
+            'the bottom half of Darth Maul',
+            'Youtube commenters'
+        ))
+
+        s += ', and destroy the superweapon in a battle featuring ' + random.choice((
+            'a bow that shoots little lightsaber-headed arrows',
+            'X-Wings and TIE fighters dodging the giant letters of the opening crawl',
+            'a Sith educational display that uses Force Lightning to demonstrate the dielectric breakdown of air',
+            'Kylo Ren putting on another helmet over his smaller one',
+            'a Sith car wash where the bristles on the brushes are little lightsabers'
+        ))
+
+        s += '.\n\nP.S. Rey\'s parents are...' + random.choice((
+            'Luke',
+            'Leia',
+            'Han',
+            'Obi-Wan',
+            'a random junk trader'
+        ))
+
+        s += ' and ' + random.choice((
+            'Poe',
+            'BB-8',
+            'Amil\'yn Holdo',
+            'Laura De\'rn',
+            'a random junk trader',
+            'that one droid from the Jawa Sandcrawler that says Gonk'
+        ))
+        await ctx.send('WARNING: STAR WARS EP 9 SPOILER!\n||' + s + '.||')
 
 
 def setup(bot):
