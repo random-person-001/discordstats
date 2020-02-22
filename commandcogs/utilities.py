@@ -36,6 +36,13 @@ class Utility(commands.Cog):
         self.bot = bot
         self.paginators = []
 
+    @commands.Cog.listener()
+    async def on_message(self, msg):
+        chan_id = 391753740253921282
+        if msg.channel.id == chan_id and not msg.author.bot and msg.content.lower() == '!levels':
+            url = "<https://www.youtube.com/watch?v=rtD59BUX6K8>"
+            await msg.channel.send(url)
+
     @commands.command()
     @commands.cooldown(2, 10)
     async def trivia(self, ctx, participant: discord.Member):
