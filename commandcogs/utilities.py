@@ -44,6 +44,47 @@ class Utility(commands.Cog):
             await msg.channel.send(url)
 
     @commands.command()
+    @commands.cooldown(1, 10)
+    async def staff(self, ctx):
+        """Print who the current staff are"""
+        msg = "**Staff:**"
+        previous = set()
+        rolls = ('Owner', 'Admin', 'Moderator', 'Submoderator')
+        for r_name in rolls:
+            roll = discord.utils.get(ctx.guild.roles, name=r_name)
+            members = [m for m in ctx.guild.members if roll in m.roles and not m in previous]
+            previous.update(members)  # don't double-post people to lower positions
+            msg += '\n' + r_name + ('s' if len(members) > 1 else '') + ': '
+            msg += ', '.join(str(user) for user in members)
+        print(msg)
+        await ctx.send(msg)
+
+    @commands.command()
+    @commands.cooldown(1, 10)
+    async def managers(self, ctx):
+        """Print who the current managers are"""
+        msg = "**Managers:**"
+        rolls = ('Trivia Manager', 'Feeds Manager', 'Source Manager', 'Astronomical Manager', 'TOTW Manager')
+        for r_name in rolls:
+            roll = discord.utils.get(ctx.guild.roles, name=r_name)
+            members = [m for m in ctx.guild.members if roll in m.roles]
+            msg += '\n' + r_name + ('s' if len(members) > 1 else '') + ': '
+            msg += ', '.join(str(user) for user in members)
+        print(msg)
+        await ctx.send(msg)
+
+    @commands.command()
+    @commands.cooldown(1, 10)
+    async def helpers(self, ctx):
+        """Print who the current helpers are"""
+        msg = "**Helpers: **"
+        roll = discord.utils.get(ctx.guild.roles, name='Helper')
+        members = [m for m in ctx.guild.members if roll in m.roles]
+        members.sort(key=lambda m: m.joined_at)
+        msg += ', '.join(str(user) for user in members)
+        await ctx.send(msg)
+
+    @commands.command()
     @commands.cooldown(2, 10)
     async def trivia(self, ctx, participant: discord.Member):
         """Toggles whether the specified member has the Trivia Participant roll.  Usable by trivia hosts and staff."""
