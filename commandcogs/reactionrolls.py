@@ -43,6 +43,13 @@ class ReactionRickRoller(commands.Cog):
             print(f'user {event.user_id} posted an unconfigured reaction ({event.emoji}) to the message')
             print(mappy)
             print(event.emoji)
+            # try to get rid of it
+            msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
+            user = discord.utils.get(self.bot.users, id=event.user_id)
+            try:
+                await msg.reactions[-1].remove(user)
+            except:
+                pass
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, event):

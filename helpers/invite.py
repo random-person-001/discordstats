@@ -22,7 +22,8 @@ class InviteWacher(commands.Cog):
             return
 
         e = discord.Embed(title="Some sneaky user posted an invite! grrrr",
-                          description=f"Inviter was {invite.inviter} ({invite.inviter.id})", color=0x993322)
+                          description=f"Inviter was {invite.inviter} ({invite.inviter.id} in {msg.channel.mention})",
+                          color=0x993322)
         e.add_field(name='Guild name', value=invite.guild.name)
         e.add_field(name='Guild id', value=invite.guild.id)
         e.add_field(name='Channel name', value=invite.channel.name)
@@ -31,12 +32,15 @@ class InviteWacher(commands.Cog):
         e.set_thumbnail(url=invite.guild.icon_url)
         await chan.send(embed=e)
 
-        try:
-            await msg.delete()
-        except discord.Forbidden:
-            await chan.send("(I wouldda deleted it but I was just hiding my powers)")
-        else:
-            await chan.send(f'- deleted an invite by {msg.author} in {msg.channel.mention}')
+        # only try to delete if a nonstaff posted it
+        staff = discord.utils.get(msg.guild.roles, name='Staff')
+        if staff not in msg.author.roles:
+            try:
+                await msg.delete()
+            except discord.Forbidden:
+                await chan.send("(I wouldda deleted it but I was just hiding my powers)")
+            else:
+                await chan.send(f'- deleted an invite by {msg.author} in {msg.channel.mention}')
 
     @commands.Cog.listener()
     async def on_message(self, msg):
