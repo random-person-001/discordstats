@@ -120,7 +120,7 @@ class Utility(commands.Cog):
             await ctx.send(f'channel with id {chan_id} not found')
             return
         try:
-            await chan.send(msg)
+            await chan.send(msg.replace('LAMP_EMOJI', '<:lamp:684018890044735498>'))
         except discord.errors.Forbidden:
             await ctx.send("yo I can't talk there")
 
