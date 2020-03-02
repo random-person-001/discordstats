@@ -110,10 +110,19 @@ class Utility(commands.Cog):
         await ctx.send(discord.utils.snowflake_time(discord_id))
 
     @commands.command(hidden=True)
-    @commands.is_owner()
     async def say(self, ctx, chan_id: int, *, msg):
+        """Send a message in another channel, specified by its ID. Quotes are not needed"""
+        if not ctx.message.author.guild_permissions.administrator:
+            await ctx.send('begone from my sight, filthy pleb')
+            return
         chan = ctx.bot.get_channel(chan_id)
-        await chan.send(msg)
+        if not chan:
+            await ctx.send(f'channel with id {chan_id} not found')
+            return
+        try:
+            await chan.send(msg)
+        except discord.errors.Forbidden:
+            await ctx.send("yo I can't talk there")
 
     @commands.command(hidden=True)
     @commands.is_owner()
