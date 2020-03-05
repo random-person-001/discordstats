@@ -126,6 +126,14 @@ class Utility(commands.Cog):
 
     @commands.command(hidden=True)
     @commands.is_owner()
+    async def say_img(self, ctx, chan_id: int):
+        """upload  an image directly"""
+        chan = ctx.bot.get_channel(chan_id)
+        img = await ctx.message.attachments[0].to_file()
+        await chan.send(file=img)
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
     async def eval(self, ctx, *, code: str):
         """Execute arbitrary python code. Owner only."""
         # noinspection PyBroadException
