@@ -53,7 +53,7 @@ class ReactionListener(commands.Cog):
                     pass
                 else:
                     await asyncio.sleep(n / 5)  # slight delay.  This makes the count accurate for rapid additions
-                    await log_message.edit(content=f'<@{event.user_id}> reacted to the old message {link} (x{n})')
+                    await log_message.edit(content=f'{event.user_id} reacted to the old message {link} (x{n})')
 
 
 def setup(bot):
