@@ -39,7 +39,7 @@ class ReactionListener(commands.Cog):
 
             # this is the first log for them reacting on this message
             if event.message_id not in self.log_msgs:
-                log_message = await log_chan.send(f'<@{event.user_id}> reacted to the old message {link} (x1)')
+                log_message = await log_chan.send(f'{event.user_id} reacted to the old message {link} (x1)')
                 self.log_msgs[event.message_id] = (datetime.utcnow(), log_message.id, 1)
 
             # they reacted recently, so don't send a whole new message about this
