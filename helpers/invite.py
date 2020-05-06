@@ -22,13 +22,14 @@ class InviteWacher(commands.Cog):
             return
 
         e = discord.Embed(title="Some sneaky user posted an invite! grrrr",
-                          description=f"Inviter was {invite.inviter} ({invite.inviter.id} in {msg.channel.mention})",
+                          description=f"Author was {msg.author} ({msg.author.id} in {msg.channel.mention})",
                           color=0x993322)
         e.add_field(name='Guild name', value=invite.guild.name)
         e.add_field(name='Guild id', value=invite.guild.id)
         e.add_field(name='Channel name', value=invite.channel.name)
         e.add_field(name='Total members', value=invite.approximate_member_count)
         e.add_field(name='Online members', value=invite.approximate_presence_count)
+        e.add_field(name='Invite link creator', value=invite.inviter)
         e.set_thumbnail(url=invite.guild.icon_url)
         await chan.send(embed=e)
 

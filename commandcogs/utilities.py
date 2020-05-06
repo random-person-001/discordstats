@@ -164,6 +164,7 @@ class Utility(commands.Cog):
         await p.post()
 
     @commands.command()
+    @commands.cooldown(4, 4)
     async def members_with(self, ctx, roll: discord.Role):
         """List the nicknames (rather than mentions) of all members with a roll"""
         gang = []
@@ -172,6 +173,8 @@ class Utility(commands.Cog):
                 gang.append(member)
         e = discord.Embed(title=f"{len(gang)} members with **{roll.name}** roll:", color=0x004a92)
         # description="\n".join(member.display_name for member in gang))
+        embed_len = 31 + len(roll.name)  # a decent estimate so far
+        # display members in columns of 10, each in their own embed field
         while gang:
             temp = ""
             for i in range(10):
@@ -182,6 +185,12 @@ class Utility(commands.Cog):
                     break
             if gang:
                 e.add_field(name='_ _', value=temp)
+
+                embed_len += len(temp) + 5
+                if embed_len > 6000 - len('too long!'):
+                    e.remove_field(-1)
+                    e.set_footer(text="too long!")
+                    break
         await ctx.send(embed=e)
 
     @commands.command()
