@@ -67,8 +67,9 @@ class Members(commands.Cog):
         with open('tmp/members.txt', 'w') as f:
             f.write('Days from now\tHuman Count\n')
             for record in results:
-                age = now - record['date']
-                f.write(f'{-age.total_seconds() / seconds_per_day}\t{record["members"]}\n')
+                # age = now - record['date']
+                # f.write(f'{-age.total_seconds() / seconds_per_day}\t{record["members"]}\n')
+                f.write(f'{str(record["date"])[:-6]}\t{record["members"]}\n')
 
     @commands.command()
     @commands.cooldown(2, 30)
@@ -81,6 +82,14 @@ class Members(commands.Cog):
             guild_id = ctx.guild.id
         f = await self.get_humans_data(ctx.bot.get_guild(guild_id), weeks)
         await ctx.send(file=f)
+
+    @commands.command()
+    @commands.cooldown(1, 60)
+    async def members_points(self, ctx):
+        """Output a file of the raw data of membership that I know of, in tab separated format. MUST RUN MEMBERS
+        COMMAND BEFORE"""
+        with open('tmp/members.txt') as f:
+            await ctx.send(file=discord.File(f))
 
 
 def setup(bot):
