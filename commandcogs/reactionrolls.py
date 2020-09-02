@@ -39,7 +39,9 @@ class ReactionRickRoller(commands.Cog):
             roll = discord.utils.get(guild.roles, id=emoji_mapping[str(event.emoji)])
             user = discord.utils.get(guild.members, id=event.user_id)
             if not user.bot:
-                if roll.name in self.region_roll_names:
+                if roll.name not in self.region_roll_names:
+                    await user.add_roles(roll, reason='reaction rolls')
+                else:
                     # get all reactions to this message and remove all from that person but the one that was just added
                     msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
                     for previous_reaction in msg.reactions:
@@ -48,13 +50,18 @@ class ReactionRickRoller(commands.Cog):
                         # so we just compare the str() versions instead
                         if msg.author in users and str(previous_reaction.emoji) != str(event.emoji):
                             await previous_reaction.remove(msg.author)
+
                     # rolls
-                    region_rolls = []
+                    roll_list = user.roles
                     for roll_name in self.region_roll_names:
-                        region_rolls.append(discord.utils.get(guild.roles, name=roll_name))
-                    await user.remove_roles(*list(r for r in region_rolls if r),
-                                            reason='only one region at a time bruh')
-                await user.add_roles(roll, reason='reaction rolls')
+                        r = discord.utils.get(guild.roles, name=roll_name)
+                        try:
+                            roll_list.remove(r)
+                        except ValueError:
+                            pass
+                    roll_list.append(roll)
+                    await user.edit(roles=roll_list, reason='Only one region at a time bruh')
+
         else:
             print(f'user {event.user_id} posted an unconfigured reaction ({event.emoji}) to the message')
             print(emoji_mapping)
