@@ -24,24 +24,40 @@ class ReactionRickRoller(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.region_roll_names = {'Africa', 'Asia', 'Europe', 'North America', 'Oceania', 'South America'}
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, event):
         try:
-            mappy = self.bot.db['REACTION_ROLLS'][str(event.guild_id)]
+            emoji_mapping = self.bot.db['REACTION_ROLLS'][str(event.guild_id)]
         except KeyError:  # no reaction rolls configured for this guild
             return
-        if event.message_id != mappy['message_id']:
+        if event.message_id != emoji_mapping['message_id']:
             return
-        if str(event.emoji) in mappy:
+        if str(event.emoji) in emoji_mapping:
             guild = self.bot.get_guild(event.guild_id)
-            roll = discord.utils.get(guild.roles, id=mappy[str(event.emoji)])
+            roll = discord.utils.get(guild.roles, id=emoji_mapping[str(event.emoji)])
             user = discord.utils.get(guild.members, id=event.user_id)
             if not user.bot:
+                if roll.name in self.region_roll_names:
+                    # get all reactions to this message and remove all from that person but the one that was just added
+                    msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
+                    for previous_reaction in msg.reactions:
+                        users = await previous_reaction.users().flatten()
+                        # sometimes a fetched reaction is only a str, sometimes partial emoji, sometimes emoji
+                        # so we just compare the str() versions instead
+                        if msg.author in users and str(previous_reaction.emoji) != str(event.emoji):
+                            await previous_reaction.remove(msg.author)
+                    # rolls
+                    region_rolls = []
+                    for roll_name in self.region_roll_names:
+                        region_rolls.append(discord.utils.get(guild.roles, name=roll_name))
+                    await user.remove_roles(*list(r for r in region_rolls if r),
+                                            reason='only one region at a time bruh')
                 await user.add_roles(roll, reason='reaction rolls')
         else:
             print(f'user {event.user_id} posted an unconfigured reaction ({event.emoji}) to the message')
-            print(mappy)
+            print(emoji_mapping)
             print(event.emoji)
             # try to get rid of it
             msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
