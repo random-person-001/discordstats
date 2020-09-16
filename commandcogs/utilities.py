@@ -164,6 +164,19 @@ class Utility(commands.Cog):
         await p.post()
 
     @commands.command()
+    @commands.cooldown(2, 120)
+    async def all_roles(self, ctx):
+        """List all rolls with how many members are in each"""
+        out = ""
+        for role in ctx.guild.roles[1:]:
+            out += str(len(role.members)).ljust(5) + role.name + "\n"
+            if len(out) > 1950:
+                await ctx.send(out)
+                out = ""
+        if out:
+            await ctx.send(out)
+
+    @commands.command()
     @commands.cooldown(4, 4)
     async def members_with(self, ctx, roll: discord.Role):
         """List the nicknames (rather than mentions) of all members with a roll"""
