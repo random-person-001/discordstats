@@ -164,7 +164,7 @@ class Utility(commands.Cog):
         await p.post()
 
     @commands.command()
-    @commands.cooldown(2, 120)
+    @commands.cooldown(1, 600)
     async def all_roles(self, ctx):
         """List all rolls with how many members are in each"""
         out = ""
