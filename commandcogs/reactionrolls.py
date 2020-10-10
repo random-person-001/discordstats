@@ -28,15 +28,12 @@ class ReactionRickRoller(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, event):
-        try:
-            emoji_mapping = self.bot.db['REACTION_ROLLS'][str(event.guild_id)]
-        except KeyError:  # no reaction rolls configured for this guild
+        if event.message_id not in self.bot.db['REACTION_ROLLS']:  # no reaction rolls configured for this msg
             return
-        if event.message_id != emoji_mapping['message_id']:
-            return
-        if str(event.emoji) in emoji_mapping:
+        mapping = self.bot.db['REACTION_ROLLS'][event.message_id]
+        if str(event.emoji) in mapping:
             guild = self.bot.get_guild(event.guild_id)
-            roll = discord.utils.get(guild.roles, id=emoji_mapping[str(event.emoji)])
+            roll = discord.utils.get(guild.roles, id=mapping[str(event.emoji)])
             user = discord.utils.get(guild.members, id=event.user_id)
             if not user.bot:
                 if roll.name not in self.region_roll_names:
@@ -66,7 +63,7 @@ class ReactionRickRoller(commands.Cog):
 
         else:
             print(f'user {event.user_id} posted an unconfigured reaction ({event.emoji}) to the message')
-            print(emoji_mapping)
+            print(mapping)
             print(event.emoji)
             # try to get rid of it
             msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
@@ -78,12 +75,9 @@ class ReactionRickRoller(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, event):
-        try:
-            mappy = self.bot.db['REACTION_ROLLS'][str(event.guild_id)]
-        except KeyError:  # no reaction rolls configured for this guild
+        if event.message_id not in self.bot.db['REACTION_ROLLS']:
             return
-        if event.message_id != mappy['message_id']:
-            return
+        mappy = self.bot.db['REACTION_ROLLS'][event.message_id]
         if str(event.emoji) in mappy:
             guild = self.bot.get_guild(event.guild_id)
             roll = discord.utils.get(guild.roles, id=mappy[str(event.emoji)])
@@ -111,7 +105,7 @@ class ReactionRickRoller(commands.Cog):
         await ctx.send(f'yoooooo ok set the message that I listen to as https://discordapp.com/channels/'
                        f'{ctx.guild.id}/{ctx.channel.id}/{msg_id}  type done instead of an emoji to exit.')
         check_db(self.bot, ctx.guild)
-        self.bot.db['REACTION_ROLLS'][str(ctx.guild.id)] = {'message_id': msg_id}
+        self.bot.db['REACTION_ROLLS'][msg_id] = dict()
         primary_msg = await ctx.channel.fetch_message(msg_id)
 
         def check(m):
@@ -130,7 +124,7 @@ class ReactionRickRoller(commands.Cog):
             if not roll:
                 await ctx.send('shucks.  That roll wasn\'t found.')
             else:
-                self.bot.db['REACTION_ROLLS'][str(ctx.guild.id)][emoji] = roll.id
+                self.bot.db['REACTION_ROLLS'][msg_id][emoji] = roll.id
                 write_db(self.bot)
                 await primary_msg.add_reaction(emoji)
         await ctx.send('cool bye')
