@@ -6,7 +6,7 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-discord-py = "*"
+discord-py = "==1.5"
 toml = "*"
 numpy = "*"
 matplotlib = "*"
@@ -19,7 +19,6 @@ psutil = "*"
 google-api-python-client = "*"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
-discord = "*"
 
 [requires]
 python_version = "3.7"

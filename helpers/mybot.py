@@ -158,7 +158,10 @@ class MyBot(commands.Bot):
         self.config = config  # top level config (like api keys)
         self.db = None  # config for like log channel ids
         self.pool = None  # postgres connection pool
-        super().__init__(command_prefix=config['prefix'])
+        print(f'Running discord.py version {discord.__version__}')
+        intents = discord.Intents.default()
+        intents.members = True
+        super().__init__(command_prefix=config['prefix'], intents=intents)
         self.add_cog(Core())
 
         for extension in config['extensions']:

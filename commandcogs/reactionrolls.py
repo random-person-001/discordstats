@@ -40,7 +40,9 @@ class ReactionRickRoller(commands.Cog):
             user = discord.utils.get(guild.members, id=event.user_id)
             if not user.bot:
                 if roll.name not in self.region_roll_names:
-                    await user.add_roles(roll, reason='reaction rolls')
+                    roll_list = user.roles
+                    roll_list.append(roll)
+                    await user.edit(roles=roll_list, reason='reaction rolls')
                 else:
                     # get all reactions to this message and remove all from that person but the one that was just added
                     msg = await self.bot.get_channel(event.channel_id).fetch_message(event.message_id)
@@ -87,7 +89,9 @@ class ReactionRickRoller(commands.Cog):
             roll = discord.utils.get(guild.roles, id=mappy[str(event.emoji)])
             user = discord.utils.get(guild.members, id=event.user_id)
             if not user.bot:
-                await user.remove_roles(roll, reason='reaction rolls')
+                roll_list = user.roles
+                roll_list.remove(roll)
+                await user.edit(roles=roll_list, reason='reaction rolls')
         else:
             print(f'user {event.user_id} removed an unconfigured reaction ({event.emoji}) to the message')
             print(mappy)
