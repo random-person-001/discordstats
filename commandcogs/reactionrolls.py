@@ -28,15 +28,20 @@ class ReactionRickRoller(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, event):
-        if event.message_id not in self.bot.db['REACTION_ROLLS']:  # no reaction rolls configured for this msg
+        if str(event.message_id) not in self.bot.db['REACTION_ROLLS']:  # no reaction rolls configured for this msg
             return
-        mapping = self.bot.db['REACTION_ROLLS'][event.message_id]
+        mapping = self.bot.db['REACTION_ROLLS'][str(event.message_id)]
+        print('i has mapping')
         if str(event.emoji) in mapping:
+            print('i has place 2')
+            print(mapping)
             guild = self.bot.get_guild(event.guild_id)
-            roll = discord.utils.get(guild.roles, id=mapping[str(event.emoji)])
+            print(guild)
+            print(mapping[str(event.emoji)])
+            roll = discord.utils.get(guild.roles, id=int(mapping[str(event.emoji)]))
             user = discord.utils.get(guild.members, id=event.user_id)
             if not user.bot:
-                if roll.name not in self.region_roll_names:
+                if roll.name not in self.region_roll_names and roll not in user.roles:
                     roll_list = user.roles
                     roll_list.append(roll)
                     await user.edit(roles=roll_list, reason='reaction rolls')
@@ -58,8 +63,9 @@ class ReactionRickRoller(commands.Cog):
                             roll_list.remove(r)
                         except ValueError:
                             pass
-                    roll_list.append(roll)
-                    await user.edit(roles=roll_list, reason='Only one region at a time bruh')
+                    if roll not in roll_list:
+                        roll_list.append(roll)
+                        await user.edit(roles=roll_list, reason='Only one region at a time bruh')
 
         else:
             print(f'user {event.user_id} posted an unconfigured reaction ({event.emoji}) to the message')
@@ -75,14 +81,14 @@ class ReactionRickRoller(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, event):
-        if event.message_id not in self.bot.db['REACTION_ROLLS']:
+        if str(event.message_id) not in self.bot.db['REACTION_ROLLS']:
             return
-        mappy = self.bot.db['REACTION_ROLLS'][event.message_id]
+        mappy = self.bot.db['REACTION_ROLLS'][str(event.message_id)]
         if str(event.emoji) in mappy:
             guild = self.bot.get_guild(event.guild_id)
             roll = discord.utils.get(guild.roles, id=mappy[str(event.emoji)])
             user = discord.utils.get(guild.members, id=event.user_id)
-            if not user.bot:
+            if not user.bot and roll in user.roles:
                 roll_list = user.roles
                 roll_list.remove(roll)
                 await user.edit(roles=roll_list, reason='reaction rolls')
