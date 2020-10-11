@@ -159,8 +159,7 @@ class MyBot(commands.Bot):
         self.db = None  # config for like log channel ids
         self.pool = None  # postgres connection pool
         print(f'Running discord.py version {discord.__version__}')
-        intents = discord.Intents.default()
-        intents.members = True
+        intents = discord.Intents.all()
         super().__init__(command_prefix=config['prefix'], intents=intents)
         self.add_cog(Core())
 
