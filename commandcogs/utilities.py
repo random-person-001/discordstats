@@ -177,13 +177,22 @@ class Utility(commands.Cog):
             await ctx.send(out)
 
     @commands.command()
-    @commands.cooldown(4, 4)
-    async def members_with(self, ctx, roll: discord.Role):
-        """List the nicknames (rather than mentions) of all members with a roll"""
+    @commands.cooldown(4, 10)
+    async def members_with(self, ctx, *, roll_name):
+        """List the nicknames (not mentions) of all members with a roll. No quotes, and capitalization is unimportant"""
         gang = []
+        roll = None
+        for rolly in ctx.guild.roles:
+            if rolly.name.lower() == roll_name.lower():
+                roll = rolly
+        if not roll:
+            await ctx.send(f'No roll `{roll_name}` found :cry:')
+            return
         for member in ctx.guild.members:
             if roll in member.roles:
                 gang.append(member)
+        if not gang:
+            await ctx.send('Yo that roll is a thing but nobody got it.  Perhaps you should give it to me.')
         e = discord.Embed(title=f"{len(gang)} members with **{roll.name}** roll:", color=0x004a92)
         # description="\n".join(member.display_name for member in gang))
         embed_len = 31 + len(roll.name)  # a decent estimate so far
