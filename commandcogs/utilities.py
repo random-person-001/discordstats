@@ -178,15 +178,20 @@ class Utility(commands.Cog):
 
     @commands.command()
     @commands.cooldown(4, 10)
-    async def members_with(self, ctx, *, roll_name):
+    async def members_with(self, ctx, *, query):
         """List the nicknames (not mentions) of all members with a roll. No quotes, and capitalization is unimportant"""
+        query = query.lower()
+        if query.startswith('"'):
+            query = query[1:]
+        if query.endswith('"'):
+            query = query[:-1]
         gang = []
         roll = None
-        for rolly in ctx.guild.roles:
-            if rolly.name.lower() == roll_name.lower():
-                roll = rolly
+        for fish in ctx.guild.roles:
+            if fish.name.lower() is query:
+                roll = fish
         if not roll:
-            await ctx.send(f'No roll `{roll_name}` found :cry:')
+            await ctx.send(f'No roll `{query}` found :cry:')
             return
         for member in ctx.guild.members:
             if roll in member.roles:
