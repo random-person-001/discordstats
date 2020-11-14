@@ -6,7 +6,7 @@ from discord.ext import commands
 
 class Tattler(commands.Cog):
     """
-    Log when bots go offline or return online.
+    Log when bots go offline or return online, and when members leave
     """
 
     def __init__(self, bot):
@@ -40,6 +40,16 @@ class Tattler(commands.Cog):
     async def on_member_update(self, old, new):
         await self.check_bot_offlines(old, new)
         await self.check_verified(old, new)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        e = discord.Embed(title=f"{member} left", description=f"User ID: `{member.id}`", color=0x0)
+        if member.nick:
+            e.add_field(name="Nickname", value=member.nick)
+        e.set_thumbnail(url=member.avatar_url)
+        e.add_field(name="Joined", value=member.joined_at)
+        e.add_field(name="Rolls", value=", ".join(r.mention for r in member.roles))
+        await self.bot.get_log_channel(member.guild).send(embed=e)
 
     async def check_verified(self, old, new):
         """If mee6 is down, look for new members getting stardust and then greet them"""
@@ -78,7 +88,7 @@ class Tattler(commands.Cog):
     async def on_member_join(self, noob):
         """When mee6 is down, do its job of welcoming for it"""
         mee6 = noob.guild.get_member(self.conf()['mee6'])
-        if mee6.status != discord.Status.offline:
+        if not mee6 or mee6.status != discord.Status.offline:
             return
         verification = self.bot.get_channel(self.conf()['verification'])
         msg = f'Welcome {noob.mention}! Read <#391765381645336577>, and type "^verify" in this channel to give ' \
