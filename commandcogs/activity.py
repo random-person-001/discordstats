@@ -2,6 +2,7 @@ import datetime
 import os
 
 import asyncpg
+import discord
 import matplotlib.pyplot as plt
 import numpy as np
 from discord import File
@@ -13,6 +14,19 @@ from helpers import graph_commons
 class Activity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    # a custom hardcoded command, cuz I feel like it
+    @commands.Cog.listener()
+    async def on_message(self, msg):
+        embed = discord.Embed(description=msg.content)
+        jump_url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+        embed.set_author(name=msg.author.display_name, url=jump_url, icon_url=str(msg.author.avatar_url))
+        if 'riley' in msg.content.lower():
+            user = msg.guild.get_member(147124933783322633)
+            await user.send(msg.jump_url, embed=embed)
+        if 'locke' in msg.content.lower():
+            user = msg.guild.get_member(275384719024193538)
+            await user.send(msg.jump_url, embed=embed)
 
     @commands.command()
     async def activitymap(self, ctx, weeks: int = 26):
