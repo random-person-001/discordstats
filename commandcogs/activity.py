@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 
 import asyncpg
 import discord
@@ -14,19 +15,25 @@ from helpers import graph_commons
 class Activity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.riley = re.compile('r+i+l+e+y+', re.IGNORECASE)
 
     # a custom hardcoded command, cuz I feel like it
     @commands.Cog.listener()
     async def on_message(self, msg):
+        if not hasattr(msg.channel, 'guild'):  # non-dms only
+            return
         embed = discord.Embed(description=msg.content)
         jump_url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
         embed.set_author(name=msg.author.display_name, url=jump_url, icon_url=str(msg.author.avatar_url))
-        if 'riley' in msg.content.lower():
+        txt = f'Pounce in {msg.channel.mention} - {msg.jump_url}'
+        if self.riley.match(msg.content):
             user = msg.guild.get_member(147124933783322633)
-            await user.send(msg.jump_url, embed=embed)
-        if 'locke' in msg.content.lower():
+            if msg.channel.permissions_for(user).read_messages:
+                await user.send(txt, embed=embed)
+        if 'locke' in msg.content.lower() and not 'locked' in msg.content.lower():
             user = msg.guild.get_member(275384719024193538)
-            await user.send(msg.jump_url, embed=embed)
+            if msg.channel.permissions_for(user).read_messages:
+                await user.send(txt, embed=embed)
 
     @commands.command()
     async def activitymap(self, ctx, weeks: int = 26):
