@@ -26,13 +26,13 @@ class Activity(commands.Cog):
         jump_url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
         embed.set_author(name=msg.author.display_name, url=jump_url, icon_url=str(msg.author.avatar_url))
         txt = f'Pounce in {msg.channel.mention} - {msg.jump_url}'
-        if self.riley.match(msg.content):
+        if self.riley.search(msg.content):
             user = msg.guild.get_member(147124933783322633)
-            if msg.channel.permissions_for(user).read_messages:
+            if msg.channel.permissions_for(user).read_messages and msg.author.id != user.id:
                 await user.send(txt, embed=embed)
-        if 'locke' in msg.content.lower() and not 'locked' in msg.content.lower():
+        if 'locke' in msg.content.lower() and 'locked' not in msg.content.lower():
             user = msg.guild.get_member(275384719024193538)
-            if msg.channel.permissions_for(user).read_messages:
+            if msg.channel.permissions_for(user).read_messages and msg.author.id != user.id:
                 await user.send(txt, embed=embed)
 
     @commands.command()
