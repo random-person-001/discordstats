@@ -15,7 +15,7 @@ class Tattler(commands.Cog):
         self.last_onlines = dict()
 
     async def log_returning(self, who: discord.Member, last_online_time: datetime.datetime):
-        chan = self.bot.get_log_channel(who.guild)
+        chan = self.bot.get_secondary_log_channel(who.guild)
         if last_online_time:
             duration = datetime.datetime.utcnow() - last_online_time
         else:
@@ -28,7 +28,7 @@ class Tattler(commands.Cog):
             await verification.send("Ayyy mee6 is back; you can use !verify again :thumbsup: ")
 
     async def log_leaving(self, who: discord.Member):
-        chan = self.bot.get_log_channel(who.guild)
+        chan = self.bot.get_secondary_log_channel(who.guild)
         await chan.send(f'{who} is now offline!')
 
         # tell people in verification that mee6's !verify won't work and to do dyno instead
@@ -49,7 +49,7 @@ class Tattler(commands.Cog):
         e.set_thumbnail(url=member.avatar_url)
         e.add_field(name="Joined", value=member.joined_at)
         e.add_field(name="Rolls", value=", ".join(r.mention for r in member.roles))
-        await self.bot.get_log_channel(member.guild).send(embed=e)
+        await self.bot.get_primary_log_channel(member.guild).send(embed=e)
 
     async def check_verified(self, old, new):
         """If mee6 is down, look for new members getting stardust and then greet them"""

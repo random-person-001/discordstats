@@ -35,7 +35,7 @@ class ReactionListener(commands.Cog):
         max_age = self.bot.db['REACTION_MAX_AGE'][str(event.guild_id)]
         if datetime.utcnow() - discord.utils.snowflake_time(event.message_id) > timedelta(days=max_age):
             link = f'https://discordapp.com/channels/{event.guild_id}/{event.channel_id}/{event.message_id}'
-            log_chan = self.bot.get_log_channel(event.guild_id)
+            log_chan = self.bot.get_secondary_log_channel(event.guild_id)
 
             # this is the first log for them reacting on this message
             if event.message_id not in self.log_msgs:

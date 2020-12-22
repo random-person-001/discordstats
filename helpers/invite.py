@@ -14,7 +14,7 @@ class InviteWacher(commands.Cog):
         self.regex = r"discord\.gg\/(\w{4,})\b"
 
     async def log(self, invite_code, msg):
-        chan = self.bot.get_log_channel(msg.guild.id)
+        chan = self.bot.get_primary_log_channel(msg.guild.id)
         try:
             invite = await self.bot.fetch_invite(invite_code)
         except discord.NotFound:

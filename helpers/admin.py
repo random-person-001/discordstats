@@ -55,7 +55,7 @@ class Admin(commands.Cog):
         """Given that a message was sent by a linkbot, ban them, delete their message, and log it"""
         print(f'yeah ok banhammer time for {message.author}')
 
-        err_channel = self.bot.get_log_channel(message.guild)
+        err_channel = self.bot.get_primary_log_channel(message.guild)
         try:
             await message.delete()
         except discord.errors.Forbidden:

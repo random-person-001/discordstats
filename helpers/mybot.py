@@ -177,8 +177,14 @@ class MyBot(commands.Bot):
     def set_db_struct(self, db):
         self.db = db
 
-    def get_log_channel(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
-        """Gets the log channel for a given guild"""
+    def get_secondary_log_channel(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
+        """Gets the less important log channel for a given guild"""
         if not isinstance(guild, int):
-            guild = guild.id
-        return self.get_channel(int(self.db['LOGS'][str(guild)]))
+            guild = guild.id  # 391743485616717824
+        return self.get_channel(int(self.db['LOGS'][str(guild)]['secondary']))
+
+    def get_primary_log_channel(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
+        """Gets the more important log channel for a given guild"""
+        if not isinstance(guild, int):
+            guild = guild.id  # 391743485616717824
+        return self.get_channel(int(self.db['LOGS'][str(guild)]['primary']))

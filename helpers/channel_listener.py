@@ -12,7 +12,7 @@ class ChannelListener(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.chan_changes = dict()
-        self.task = self.bot.loop.create_task(self.listener())
+        self.task = self.bot.loop.create_task(self.listener_())
 
     def cog_unload(self):
         if self.task is not None:
@@ -36,7 +36,7 @@ class ChannelListener(commands.Cog):
 
             print(self.chan_changes)
 
-    async def listener(self):
+    async def listener_(self):
         """A background task that monitors the recently-changed channels, and tells about it in a channel"""
         await self.bot.wait_until_ready()
         for guild in self.bot.guilds:
@@ -54,7 +54,7 @@ class ChannelListener(commands.Cog):
                         # wait for everything to calm down before complaining.  Don't wanna log something if ongoing
                         if (datetime.now() - latest_change) > timedelta(seconds=.3):
                             print('channels moved!')
-                            log_chan = self.bot.get_log_channel(guild.id)
+                            log_chan = self.bot.get_primary_log_channel(guild.id)
                             # the `changes` list, but sorted from top to bottom as seen before the drag event
                             sorted_begins = sorted(changes, key=lambda chan: chan[1].position)
                             if len(changes) < 2:
@@ -109,7 +109,7 @@ class ChannelListener(commands.Cog):
                             f.write(traceback.format_exc())
                         self.chan_changes = dict()  # needs to be cleared or we'll keep throwing the same error
                         try:
-                            log_chan = self.bot.get_log_channel(guild.id)
+                            log_chan = self.bot.get_primary_log_channel(guild.id)
                             await log_chan.send("Oy, some channels moved but I had problems understanding what "
                                                 "happened.  I got an error like `{}`.".format(e))
                             ids = {chan[1].id for chan in changes}  # eliminate repeated elements by using set
