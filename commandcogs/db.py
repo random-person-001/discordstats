@@ -405,7 +405,10 @@ class DB(commands.Cog):
         else:
             timestamp = datetime.utcnow()
         async with self.bot.pool.acquire() as conn:
-            prev = await conn.fetchrow(f'select * from c{chan_id} where id = $1', payload.message_id)
+            try:
+                prev = await conn.fetchrow(f'select * from c{chan_id} where id = $1', payload.message_id)
+            except asyncpg.exceptions.UndefinedTableError:
+                return
             if not prev:
                 # the message being edited has not been recorded by us
                 return

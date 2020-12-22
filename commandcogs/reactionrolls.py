@@ -31,13 +31,8 @@ class ReactionRickRoller(commands.Cog):
         if str(event.message_id) not in self.bot.db['REACTION_ROLLS']:  # no reaction rolls configured for this msg
             return
         mapping = self.bot.db['REACTION_ROLLS'][str(event.message_id)]
-        print('i has mapping')
         if str(event.emoji) in mapping:
-            print('i has place 2')
-            print(mapping)
             guild = self.bot.get_guild(event.guild_id)
-            print(guild)
-            print(mapping[str(event.emoji)])
             roll = discord.utils.get(guild.roles, id=int(mapping[str(event.emoji)]))
             user = discord.utils.get(guild.members, id=event.user_id)
             if not user.bot:
