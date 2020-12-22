@@ -186,13 +186,14 @@ class Utility(commands.Cog):
         if query.endswith('"'):
             query = query[:-1]
         gang = []
-        roll = None
         for fish in ctx.guild.roles:
-            if fish.name.lower() is query:
+            if fish.name.lower() == query:
                 roll = fish
-        if not roll:
+                break
+        else:
             await ctx.send(f'No roll `{query}` found :cry:')
             return
+
         for member in ctx.guild.members:
             if roll in member.roles:
                 gang.append(member)
