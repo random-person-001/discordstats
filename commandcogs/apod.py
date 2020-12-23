@@ -2,12 +2,12 @@ import asyncio
 import datetime
 import json
 import re
-import time
 import traceback
 
 import aiohttp
 import async_timeout
 import discord
+import time
 from discord.ext import tasks, commands
 
 
@@ -95,6 +95,14 @@ class Apod(commands.Cog):
                 if self.last_json['url'].startswith('//'):
                     self.last_json['url'] = 'https:' + self.last_json['url']
 
+    def get_texty(self):
+        out = f'__**{self.last_json["title"]}**__\n\\> ' + self.last_json['explanation']
+        if 'copyright' in self.last_json:
+            out += '   ***Image credit & copyright: ' + self.last_json['copyright'] + '***\n '
+        out = out.replace('*', '\\*').replace('_', '\\_')
+        out += self.last_json['url']
+        return out
+
     async def get_embed(self):
         """Build the discord.Embed object to send to the chat"""
         await self.update_image()
@@ -121,11 +129,17 @@ class Apod(commands.Cog):
         nasa_raster_icon = 'http://www.laboiteverte.fr/wp-content/uploads/2015/09/nasa-logo.png'
         return embed.set_footer(text=self.last_checked, icon_url=nasa_raster_icon)
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     async def apod(self, ctx):
         """Post NASA's Astronomy Picture of the Day here"""
         await ctx.send(embed=await self.get_embed())
+
+    @commands.command(hidden=True)
+    async def oapod(self, ctx):
+        """Get a copy/pastable apod post"""
+        await self.update_image()
+        await ctx.send(self.get_texty())
 
     @tasks.loop(hours=24)
     async def apod_bg(self):
