@@ -36,6 +36,9 @@ def get_db():
     try:
         with open('config/db.json') as f:
             return json.load(f)
+    except json.decoder.JSONDecodeError:
+        print('Malformed database file: config/db.json\nAborting startup until this is fixed.')
+        exit(1)
     except:
         return write_db()
 
