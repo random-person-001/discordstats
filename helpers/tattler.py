@@ -49,7 +49,7 @@ class Tattler(commands.Cog):
         e.set_thumbnail(url=member.avatar_url)
         e.add_field(name="Joined", value=member.joined_at)
         e.add_field(name="Rolls", value=", ".join(r.mention for r in member.roles))
-        await self.bot.get_primary_log_channel(member.guild).send(embed=e)
+        await self.bot.get_secondary_log_channel(member.guild).send(embed=e)
 
     async def check_verified(self, old, new):
         """If mee6 is down, look for new members getting stardust and then greet them"""
