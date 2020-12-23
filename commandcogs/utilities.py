@@ -20,7 +20,7 @@ def item_line_count(path):
     """
     if isdir(path):
         return dir_line_count(path)
-    elif isfile(path):
+    elif isfile(path) and path.endswith('.py'):
         return len(open(path, 'rb').readlines())
     else:
         return 0
@@ -42,6 +42,16 @@ class Utility(commands.Cog):
         if msg.channel.id == chan_id and not msg.author.bot and msg.content.lower() == '!levels':
             url = "<https://www.youtube.com/watch?v=rtD59BUX6K8>"
             await msg.channel.send(url)
+
+    @commands.command()
+    async def ban_recents(self, ctx, first_raider: discord.Member):
+        """Ban everyone who joined after this member did.  Admin only"""
+        if not ctx.message.author.guild_permissions.administrator:
+            await ctx.send('Out of caution, this is restricted to admins only')
+            return
+        earliest = first_raider.joined_at
+        to_ban = tuple(filter(lambda m: m.joined_at > earliest, ctx.guild.members))
+        await ctx.send(f'This will ban {len(to_ban)} members.  Type "ban them" to confirm and continue.')
 
     @commands.command()
     @commands.cooldown(1, 10)
