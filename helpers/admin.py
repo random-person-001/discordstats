@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 import discord
 from discord.ext import commands
@@ -7,6 +8,29 @@ from discord.ext import commands
 class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_member_update(self, old, new):
+        """Log username/nickname changes"""
+        if old.nick == new.nick and old.name == new.name:
+            return
+
+        print('O.o')
+        print(old.id)
+
+        async with self.bot.pool.acquire() as conn:
+            await conn.execute(f'CREATE TABLE IF NOT EXISTS nickname{old.id} (' +
+                               'name text NOT NULL,'
+                               'time timestamp NOT NULL)')
+            await conn.execute(f'CREATE TABLE IF NOT EXISTS username{old.id} (' +
+                               'name text NOT NULL,'
+                               'time timestamp NOT NULL)')
+            if old.nick and new.nick != old.nick:
+                await conn.execute(f'insert into nickname{old.id} values ($1, $2)',
+                                   old.nick, datetime.utcnow())
+            elif old.name != new.name:
+                await conn.execute(f'insert into username{old.id} values ($1, $2)',
+                                   old.name, datetime.utcnow())
 
     @commands.command(hidden=True)
     async def verify(self, ctx):
@@ -26,11 +50,11 @@ class Admin(commands.Cog):
         Test if all of the following conditions are met:
         1) The user's message has a clickable link in it
         2) This is the user's first message
-        3) The message contains any of the words 'porn', 'naked', or 'nude'
+        3) The message contains any of the words 'porn', 'naked', 'onlyfans', or 'nude'
         """
 
         # only analyze if the message has a nsfw tinge to it
-        bad_words = ('porn', 'naked', 'nude')
+        bad_words = ('porn', 'naked', 'nude', 'onlyfans')
         if not any(bad_word in message.content for bad_word in bad_words):
             return False
         print('ono it has bad words')
@@ -45,7 +69,7 @@ class Admin(commands.Cog):
         async with self.bot.pool.acquire() as conn:
             msg_count = await conn.fetch(f'select count(*) from gg{message.guild.id}'
                                          f' where author = $1', message.author.id)['count']
-            if msg_count > 1:
+            if msg_count > 2:
                 return False
         print('and its like their first message')
 
