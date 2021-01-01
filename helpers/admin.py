@@ -57,7 +57,7 @@ class Admin(commands.Cog):
         now = datetime.utcnow()
         async with self.bot.pool.acquire() as conn:
             try:
-                async for row in conn.cursor(f'select * from username{member.id}'):
+                for row in await conn.fetch(f'select * from username{member.id}'):
                     out += '`' + humanize_timedelta(now - row['timestamp']) + '`  ' + row['text'] + '\n'
             except asyncpg.UndefinedTableError:
                 await ctx.send("I don't know of any of their past nicknames.")
