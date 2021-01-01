@@ -76,24 +76,23 @@ class Apod(commands.Cog):
         and greatest data
         """
         today = time.strftime("%Y-%m-%d")
-        if today != self.last_checked:
-            self.last_checked = today
-            apod_json = await fetch_url(f'https://api.nasa.gov/planetary/apod?date={today}&api_key={self.nasa_key}')
-            self.last_json = json.loads(apod_json)
-            smol_date = time.strftime('%y%m%d')
-            self.last_json['permalink'] = f'https://apod.nasa.gov/apod/ap{smol_date}.html'
-            self.truncate_explanation()
-            if self.last_json['media_type'] == 'image':
-                if 'hdurl' in self.last_json:
-                    self.last_url = self.last_json['hdurl']
-                else:
-                    self.last_url = self.last_json['url']
+        self.last_checked = today
+        apod_json = await fetch_url(f'https://api.nasa.gov/planetary/apod?date={today}&api_key={self.nasa_key}')
+        self.last_json = json.loads(apod_json)
+        smol_date = time.strftime('%y%m%d')
+        self.last_json['permalink'] = f'https://apod.nasa.gov/apod/ap{smol_date}.html'
+        self.truncate_explanation()
+        if self.last_json['media_type'] == 'image':
+            if 'hdurl' in self.last_json:
+                self.last_url = self.last_json['hdurl']
             else:
-                self.last_url = None
-                # kinda handle obnoxious unclickable urls
-                # (like returned on 2019-04-28)
-                if self.last_json['url'].startswith('//'):
-                    self.last_json['url'] = 'https:' + self.last_json['url']
+                self.last_url = self.last_json['url']
+        else:
+            self.last_url = None
+            # kinda handle obnoxious unclickable urls
+            # (like returned on 2019-04-28)
+            if self.last_json['url'].startswith('//'):
+                self.last_json['url'] = 'https:' + self.last_json['url']
 
     def get_texty(self):
         out = f'__**{self.last_json["title"]}**__\n\\> ' + self.last_json['explanation']
@@ -141,7 +140,7 @@ class Apod(commands.Cog):
         await self.update_image()
         await ctx.send(self.get_texty())
 
-    @tasks.loop(hours=24)
+    @tasks.loop(hours=23.9)
     async def apod_bg(self):
         apod_channel = self.bot.get_channel(self.bot.config['APOD']['apod_channel'])
         apod_err_channel = self.bot.get_channel(self.bot.config['APOD']['apod_err_channel'])
