@@ -29,10 +29,9 @@ class Admin(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, old, new):
-        """Log username/nickname changes"""
-        if old.nick == new.nick and old.name == new.name:
+        """Log nickname changes"""
+        if old.nick == new.nick:
             return
-
         async with self.bot.pool.acquire() as conn:
             if old.nick and new.nick != old.nick:
                 await conn.execute(f'CREATE TABLE IF NOT EXISTS nickname{old.id} (' +
@@ -40,12 +39,21 @@ class Admin(commands.Cog):
                                    'time timestamp NOT NULL)')
                 await conn.execute(f'insert into nickname{old.id} values ($1, $2)',
                                    old.nick, datetime.utcnow())
+                print('yeet inserted into table')
+
+    @commands.Cog.listener()
+    async def on_user_update(self, old, new):
+        """Log username changes"""
+        if old.name == new.name:
+            return
+        async with self.bot.pool.acquire() as conn:
             if old.name != new.name:
                 await conn.execute(f'CREATE TABLE IF NOT EXISTS username{old.id} (' +
                                    'name text NOT NULL,'
                                    'time timestamp NOT NULL)')
                 await conn.execute(f'insert into username{old.id} values ($1, $2)',
                                    old.name, datetime.utcnow())
+                print('yeet inserted into table')
 
     @commands.command()
     async def past_names(self, ctx, member: discord.User):
