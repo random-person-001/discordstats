@@ -1,8 +1,26 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import asyncpg
 import discord
 from discord.ext import commands
+
+
+def humanize_timedelta(td: timedelta):
+    """Output a short, easy to digest string approximating the datetime.timedelta object"""
+    if td < timedelta(seconds=60):  # a minute
+        return str(td.seconds) + 's'
+    if td < timedelta(hours=1):  # an hour
+        return str(round(td.seconds / 60)) + 'm'
+    if td < timedelta(hours=24 * 2):  # two days
+        return str(td.days * 24 + round(td.seconds / 60 / 60)) + 'h'
+    if td < timedelta(weeks=2):  # two weeks
+        return str(td.days) + 'd'
+    if td < timedelta(weeks=8):  # two months
+        return str(round(td.days / 7)) + 'w'
+    if td < timedelta(weeks=52):  # a year
+        return str(round(td.days / 29.5)) + ' months'
+    return str(round(td.days / 365)) + 'y'
 
 
 class Admin(commands.Cog):
@@ -15,22 +33,40 @@ class Admin(commands.Cog):
         if old.nick == new.nick and old.name == new.name:
             return
 
-        print('O.o')
-        print(old.id)
-
         async with self.bot.pool.acquire() as conn:
-            await conn.execute(f'CREATE TABLE IF NOT EXISTS nickname{old.id} (' +
-                               'name text NOT NULL,'
-                               'time timestamp NOT NULL)')
-            await conn.execute(f'CREATE TABLE IF NOT EXISTS username{old.id} (' +
-                               'name text NOT NULL,'
-                               'time timestamp NOT NULL)')
             if old.nick and new.nick != old.nick:
+                await conn.execute(f'CREATE TABLE IF NOT EXISTS nickname{old.id} (' +
+                                   'name text NOT NULL,'
+                                   'time timestamp NOT NULL)')
                 await conn.execute(f'insert into nickname{old.id} values ($1, $2)',
                                    old.nick, datetime.utcnow())
-            elif old.name != new.name:
+            if old.name != new.name:
+                await conn.execute(f'CREATE TABLE IF NOT EXISTS username{old.id} (' +
+                                   'name text NOT NULL,'
+                                   'time timestamp NOT NULL)')
                 await conn.execute(f'insert into username{old.id} values ($1, $2)',
                                    old.name, datetime.utcnow())
+
+    @commands.command()
+    async def past_names(self, ctx, member: discord.User):
+        """Lookup past names of a member"""
+        if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.message.author.roles:
+            await ctx.send('This is a staff-only command.')
+            return
+        out = ''
+        now = datetime.utcnow()
+        async with self.bot.pool.acquire() as conn:
+            try:
+                async for row in conn.fetch(f'select * from table username{member.id}'):
+                    out += '`' + humanize_timedelta(now - row['timestamp']) + '`  ' + row['text'] + '\n'
+            except asyncpg.UndefinedTableError:
+                await ctx.send("I don't know of any of their past nicknames.")
+                return
+            if not out:
+                await ctx.send("I don't know of any of their past nicknames.")
+            else:
+                await ctx.send(
+                    discord.Embed(color=0x492045, title=f'Past usernames of <@{member.id}>', description=out[:2040]))
 
     @commands.command(hidden=True)
     async def verify(self, ctx):
