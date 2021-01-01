@@ -65,16 +65,17 @@ class Admin(commands.Cog):
         now = datetime.utcnow()
         async with self.bot.pool.acquire() as conn:
             try:
-                for row in await conn.fetch(f'select * from username{member.id}'):
-                    out += '`' + humanize_timedelta(now - row['timestamp']) + '`  ' + row['text'] + '\n'
+                for row in await conn.fetch(f'select * from username{member.id} order by time desc'):
+                    out += '`' + humanize_timedelta(now - row['time']) + ' `  ' + row['name'] + '\n'
             except asyncpg.UndefinedTableError:
                 await ctx.send("I don't know of any of their past nicknames.")
                 return
             if not out:
                 await ctx.send("I don't know of any of their past nicknames.")
             else:
-                await ctx.send(
-                    discord.Embed(color=0x492045, title=f'Past usernames of <@{member.id}>', description=out[:2040]))
+                await ctx.send(embed=
+                               discord.Embed(color=0x492045, title=f'Past usernames of {member}',
+                                             description=out[:2040]))
 
     @commands.command(hidden=True)
     async def verify(self, ctx):
