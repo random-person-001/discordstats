@@ -45,61 +45,7 @@ class Utility(commands.Cog):
             await msg.channel.send(url)
         await self.check_for_naughties(msg)
 
-    @commands.Cog.listener()
-    async def on_message_edit(self, old, new):
-        await self.check_for_naughties(new)
-
-    async def check_for_naughties(self, msg):
-        if not msg.author.bot and msg.channel.id in self.image_muted_chans:
-            if msg.embeds or msg.attachments:
-                log_channel = self.bot.get_secondary_log_channel(msg.guild)
-                try:
-                    await msg.delete()
-                except discord.Forbidden:
-                    await log_channel.send(f'Could not do my job of deleting ILLEGAL messages in {msg.channel.mention}')
-                except (discord.NotFound, discord.HTTPException):
-                    pass
-                else:
-                    await msg.channel.send(f'{msg.author.mention}, sending images is not allowed rn', delete_after=5)
-                    await log_channel.send(f'Deleted message by {msg.author} with attachment/embed '
-                                           f'in {msg.channel.mention}')
-
-    @commands.command(aliases=['disallow_images', 'stop_images', 'no_images', 'shutup'])
-    async def imageoff(self, ctx, channel: discord.TextChannel = None):
-        """Start yeeting any message in the channel that has an embed or attachment"""
-        if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.author.roles:
-            await ctx.send('Only staff may use this :sadpluto:')
-            return
-        if not channel:
-            channel = ctx.channel
-        if channel.id in self.image_muted_chans:
-            await ctx.send("Bruh it's already on the Naughty List")
-        else:
-            self.image_muted_chans.add(channel.id)
-            await ctx.send(f'New messages with attachments or embeds will now be deleted in {channel.mention}\n\n'
-                           'To deactivate this, run `=allow_images`')
-            await ctx.bot.get_secondary_log_channel(ctx.guild).send(f'{channel.mention} is now on the No Images '
-                                                                    f'Naughty List  :eyes:  \n\n'
-                                                                    f'Turn this off with `=allow_images`')
-
-    @commands.command(aliases=['allow_images', 'yes_images', 'start_images'])
-    async def imageon(self, ctx, channel: discord.TextChannel = None):
-        """Stop yeeting any message in the channel that has an embed or attachment"""
-        if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.author.roles:
-            await ctx.send('Only staff may use this :sadpluto:')
-            return
-        if not channel:
-            channel = ctx.channel
-        if channel.id not in self.image_muted_chans:
-            await ctx.send("Bruh it's not on the Naughty List, u dont needta do this")
-        else:
-            self.image_muted_chans.remove(channel.id)
-            await ctx.send('Yeet we gucci')
-            await channel.send('Ok yall can post images again, but don\'t go crazy (I still got my eyes on ya)')
-            await ctx.bot.get_secondary_log_channel(ctx.guild).send(f'{channel.mention} is no longer on the No Images '
-                                                                    f'Naughty List')
-
-    @commands.command()
+    @commands.command(hidden=True)
     async def ban_recents(self, ctx, first_raider: discord.Member):
         """Ban everyone who joined after this member did.  Admin only"""
         if not ctx.message.author.guild_permissions.administrator:
@@ -108,6 +54,7 @@ class Utility(commands.Cog):
         earliest = first_raider.joined_at
         to_ban = tuple(filter(lambda m: m.joined_at > earliest, ctx.guild.members))
         await ctx.send(f'This will ban {len(to_ban)} members.  Type "ban them" to confirm and continue.')
+        await ctx.send('this command is unfinished h')
 
     @commands.command()
     @commands.cooldown(1, 10)

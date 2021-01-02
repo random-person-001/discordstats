@@ -26,6 +26,7 @@ def humanize_timedelta(td: timedelta):
 class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.image_muted_chans = set()  # ids
 
     @commands.Cog.listener()
     async def on_member_update(self, old, new):
@@ -76,6 +77,66 @@ class Admin(commands.Cog):
                 await ctx.send(embed=
                                discord.Embed(color=0x492045, title=f'Past usernames of {member}',
                                              description=out[:2040]))
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        await self.check_for_naughties(message)
+        if await self.is_linkbot(message):
+            await self.ban_linkbots(message)
+
+    @commands.Cog.listener()
+    async def on_message_edit(self, old, new):
+        await self.check_for_naughties(new)
+
+    async def check_for_naughties(self, msg):
+        if not msg.author.bot and msg.channel.id in self.image_muted_chans:
+            if msg.embeds or msg.attachments:
+                log_channel = self.bot.get_secondary_log_channel(msg.guild)
+                try:
+                    await msg.delete()
+                except discord.Forbidden:
+                    await log_channel.send(f'Could not do my job of deleting ILLEGAL messages in {msg.channel.mention}')
+                except (discord.NotFound, discord.HTTPException):
+                    pass
+                else:
+                    await msg.channel.send(f'{msg.author.mention}, sending images is not allowed rn', delete_after=5)
+                    await log_channel.send(f'Deleted message by {msg.author} with attachment/embed '
+                                           f'in {msg.channel.mention}')
+
+    @commands.command(aliases=['disallow_images', 'stop_images', 'no_images', 'shutup'])
+    async def imageoff(self, ctx, channel: discord.TextChannel = None):
+        """Start yeeting any message in the channel that has an embed or attachment"""
+        if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.author.roles:
+            await ctx.send('Only staff may use this :sadpluto:')
+            return
+        if not channel:
+            channel = ctx.channel
+        if channel.id in self.image_muted_chans:
+            await ctx.send("Bruh it's already on the Naughty List")
+        else:
+            self.image_muted_chans.add(channel.id)
+            await ctx.send(f'New messages with attachments or embeds will now be deleted in {channel.mention}\n\n'
+                           'To deactivate this, run `=allow_images`')
+            await ctx.bot.get_secondary_log_channel(ctx.guild).send(f'{channel.mention} is now on the No Images '
+                                                                    f'Naughty List  :eyes:  \n\n'
+                                                                    f'Turn this off with `=allow_images`')
+
+    @commands.command(aliases=['allow_images', 'yes_images', 'start_images'])
+    async def imageon(self, ctx, channel: discord.TextChannel = None):
+        """Stop yeeting any message in the channel that has an embed or attachment"""
+        if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.author.roles:
+            await ctx.send('Only staff may use this :sadpluto:')
+            return
+        if not channel:
+            channel = ctx.channel
+        if channel.id not in self.image_muted_chans:
+            await ctx.send("Bruh it's not on the Naughty List, u dont needta do this")
+        else:
+            self.image_muted_chans.remove(channel.id)
+            await ctx.send('Yeet we gucci')
+            await channel.send('Ok yall can post images again, but don\'t go crazy (I still got my eyes on ya)')
+            await ctx.bot.get_secondary_log_channel(ctx.guild).send(f'{channel.mention} is no longer on the No Images '
+                                                                    f'Naughty List')
 
     @commands.command(hidden=True)
     async def verify(self, ctx):
@@ -138,11 +199,6 @@ class Admin(commands.Cog):
             await log_channel.send(msg)
         except discord.errors.Forbidden:
             await err_channel.send(f'Autobanning of bot {message.author} failed cuz I need moar perms')
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if await self.is_linkbot(message):
-            await self.ban_linkbots(message)
 
 
 def setup(bot):
