@@ -52,7 +52,7 @@ class Utility(commands.Cog):
     async def check_for_naughties(self, msg):
         if not msg.author.bot and msg.channel.id in self.image_muted_chans:
             if msg.embeds or msg.attachments:
-                log_channel = self.bot.get_primary_log_channel(msg.guild)
+                log_channel = self.bot.get_secondary_log_channel(msg.guild)
                 try:
                     await msg.delete()
                 except discord.Forbidden:
@@ -78,9 +78,9 @@ class Utility(commands.Cog):
             self.image_muted_chans.add(channel.id)
             await ctx.send(f'New messages with attachments or embeds will now be deleted in {channel.mention}\n\n'
                            'To deactivate this, run `=allow_images`')
-            await ctx.bot.get_primary_log_channel(ctx.guild).send(f'{channel.mention} is now on the No Images '
-                                                                  f'Naughty List  :eyes:  \n\n'
-                                                                  f'Turn this off with `=allow_images`')
+            await ctx.bot.get_secondary_log_channel(ctx.guild).send(f'{channel.mention} is now on the No Images '
+                                                                    f'Naughty List  :eyes:  \n\n'
+                                                                    f'Turn this off with `=allow_images`')
 
     @commands.command(aliases=['allow_images', 'yes_images', 'start_images'])
     async def imageon(self, ctx, channel: discord.TextChannel = None):
@@ -96,8 +96,8 @@ class Utility(commands.Cog):
             self.image_muted_chans.remove(channel.id)
             await ctx.send('Yeet we gucci')
             await channel.send('Ok yall can post images again, but don\'t go crazy (I still got my eyes on ya)')
-            await ctx.bot.get_primary_log_channel(ctx.guild).send(f'{channel.mention} is no longer on the No Images '
-                                                                  f'Naughty List')
+            await ctx.bot.get_secondary_log_channel(ctx.guild).send(f'{channel.mention} is no longer on the No Images '
+                                                                    f'Naughty List')
 
     @commands.command()
     async def ban_recents(self, ctx, first_raider: discord.Member):
