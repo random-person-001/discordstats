@@ -64,8 +64,8 @@ class Utility(commands.Cog):
                     await log_channel.send(f'Deleted message by {msg.author} with attachment/embed '
                                            f'in {msg.channel.mention}')
 
-    @commands.command(aliases=['stop_images', 'no_images', 'shutup'])
-    async def disallow_images(self, ctx, channel: discord.TextChannel = None):
+    @commands.command(aliases=['disallow_images', 'stop_images', 'no_images', 'shutup'])
+    async def imageoff(self, ctx, channel: discord.TextChannel = None):
         """Start yeeting any message in the channel that has an embed or attachment"""
         if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.author.roles:
             await ctx.send('Only staff may use this :sadpluto:')
@@ -82,8 +82,8 @@ class Utility(commands.Cog):
                                                                   f'Naughty List  :eyes:  \n\n'
                                                                   f'Turn this off with `=allow_images`')
 
-    @commands.command(aliases=['yes_images', 'start_images'])
-    async def allow_images(self, ctx, channel: discord.TextChannel = None):
+    @commands.command(aliases=['allow_images', 'yes_images', 'start_images'])
+    async def imageon(self, ctx, channel: discord.TextChannel = None):
         """Stop yeeting any message in the channel that has an embed or attachment"""
         if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.author.roles:
             await ctx.send('Only staff may use this :sadpluto:')
