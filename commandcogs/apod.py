@@ -99,8 +99,7 @@ class Apod(commands.Cog):
         if 'copyright' in self.last_json:
             out += '   ***Image credit & copyright: ' + self.last_json['copyright'] + '***\n '
         out = out.replace('*', '\\*').replace('_', '\\_')
-        out += self.last_json['url']
-        return out
+        return out, self.last_json['url']
 
     async def get_embed(self):
         """Build the discord.Embed object to send to the chat"""
@@ -138,7 +137,9 @@ class Apod(commands.Cog):
     async def oapod(self, ctx):
         """Get a copy/pastable apod post"""
         await self.update_image()
-        await ctx.send(self.get_texty())
+        main, url = self.get_texty()
+        await ctx.send(main)
+        await ctx.send(url)
 
     @tasks.loop(hours=23.9)
     async def apod_bg(self):
