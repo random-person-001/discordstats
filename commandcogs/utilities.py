@@ -14,6 +14,23 @@ from discord.ext import commands
 from helpers import Paginator
 
 
+def humanize_timedelta(td: timedelta):
+    """Output a short, easy to digest string approximating the datetime.timedelta object"""
+    if td < timedelta(seconds=60):  # a minute
+        return str(td.seconds) + 's'
+    if td < timedelta(hours=1):  # an hour
+        return str(round(td.seconds / 60)) + 'm'
+    if td < timedelta(hours=24 * 2):  # two days
+        return str(td.days * 24 + round(td.seconds / 60 / 60)) + 'h'
+    if td < timedelta(weeks=2):  # two weeks
+        return str(td.days) + 'd'
+    if td < timedelta(weeks=8):  # two months
+        return str(round(td.days / 7)) + 'w'
+    if td < timedelta(weeks=52):  # a year
+        return str(round(td.days / 29.5)) + ' months'
+    return str(round(td.days / 365)) + 'y'
+
+
 def item_line_count(path):
     """Functions to get lines of code in a directory from
     https://stackoverflow.com/questions/38543709/count-lines-of-code-in-directory-using-python/49417516#49417516
@@ -43,18 +60,36 @@ class Utility(commands.Cog):
         if msg.channel.id == bot_room and not msg.author.bot and msg.content.lower() == '!levels':
             url = "<https://www.youtube.com/watch?v=rtD59BUX6K8>"
             await msg.channel.send(url)
-        await self.check_for_naughties(msg)
 
-    @commands.command(hidden=True)
-    async def ban_recents(self, ctx, first_raider: discord.Member):
-        """Ban everyone who joined after this member did.  Admin only"""
-        if not ctx.message.author.guild_permissions.administrator:
-            await ctx.send('Out of caution, this is restricted to admins only')
+    @commands.command()
+    async def ban_since(self, ctx, first_raider: discord.Member):
+        """Ban everyone who joined after this member did.  Includes the specified member.
+        Ideally bans 50 per second"""
+        if not ctx.message.author.guild_permissions.ban_members:
+            await ctx.send('This is restricted to admins only')
             return
         earliest = first_raider.joined_at
-        to_ban = tuple(filter(lambda m: m.joined_at > earliest, ctx.guild.members))
-        await ctx.send(f'This will ban {len(to_ban)} members.  Type "ban them" to confirm and continue.')
-        await ctx.send('this command is unfinished h')
+        if datetime.utcnow() - earliest > timedelta(days=2):
+            await ctx.send('For safety reasons, the max amount of time you can ban is 2 days. '
+                           ' Contact locke for override')
+            return
+        to_ban = tuple(filter(lambda m: m.joined_at >= earliest, ctx.guild.members))
+        dt = humanize_timedelta(datetime.utcnow() - first_raider.joined_at)
+        await ctx.send(f'This will ban {len(to_ban)} members, joining in the last'
+                       f' ~{dt}.  Type "yes" to confirm and continue.')
+
+        def check(msg):
+            return msg.author == ctx.author
+
+        msg = await self.bot.wait_for("message", check=check, timeout=120)
+        if not msg or 'yes' not in msg.content.lower():
+            await ctx.send('Aborting.')
+            return
+        for raider in to_ban:
+            await ctx.guild.ban(raider, reason=f"Mass raid; command run by {ctx.author.id}")
+        s = " ".join(raider.id for raider in to_ban)
+        await ctx.send(f'banned ids are {s}'[:1999])
+        await ctx.send('justice has been served.')
 
     @commands.command()
     @commands.cooldown(1, 10)
