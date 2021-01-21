@@ -78,6 +78,35 @@ class Admin(commands.Cog):
                                discord.Embed(color=0x492045, title=f'Past usernames of {member}',
                                              description=out[:2040]))
 
+    @commands.command()
+    async def ban_since(self, ctx, first_raider: discord.Member):
+        """Ban everyone who joined after this member did.  Includes the specified member.
+        Ideally bans 50 per second"""
+        if not ctx.message.author.guild_permissions.ban_members:
+            await ctx.send('This is restricted to admins only')
+            return
+        earliest = first_raider.joined_at
+        if datetime.utcnow() - earliest > timedelta(days=2):
+            await ctx.send('For safety reasons, the max amount of time you can ban is 2 days. '
+                           ' Contact locke for override')
+            return
+        to_ban = tuple(filter(lambda m: m.joined_at >= earliest, ctx.guild.members))
+        dt = humanize_timedelta(datetime.utcnow() - first_raider.joined_at)
+        await ctx.send(f'This will ban {len(to_ban)} members, joining in the last'
+                       f' ~ {dt}.  Type "yes" to confirm and continue.')
+
+        def check(msg):
+            return msg.author == ctx.author
+
+        msg = await self.bot.wait_for("message", check=check, timeout=120)
+        if not msg or 'yes' not in msg.content.lower():
+            await ctx.send('Aborting.')
+            return
+        for raider in to_ban:
+            await ctx.guild.ban(raider, reason=f"Mass raid; command run by {ctx.author.id}")
+        s = " ".join(raider.id for raider in to_ban)
+        await ctx.send('justice has been served.')
+
     @commands.Cog.listener()
     async def on_message(self, message):
         await self.check_for_naughties(message)
