@@ -88,7 +88,6 @@ class Utility(commands.Cog):
         for raider in to_ban:
             await ctx.guild.ban(raider, reason=f"Mass raid; command run by {ctx.author.id}")
         s = " ".join(raider.id for raider in to_ban)
-        await ctx.send(f'banned ids are {s}'[:1999])
         await ctx.send('justice has been served.')
 
     @commands.command()
