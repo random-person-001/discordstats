@@ -104,7 +104,6 @@ class Admin(commands.Cog):
             return
         for raider in to_ban:
             await ctx.guild.ban(raider, reason=f"Mass raid; command run by {ctx.author.id}")
-        s = " ".join(raider.id for raider in to_ban)
         await ctx.send('justice has been served.')
 
     @commands.Cog.listener()
