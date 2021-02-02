@@ -56,7 +56,7 @@ class Admin(commands.Cog):
                                    old.name, datetime.utcnow())
                 print('yeet inserted into table')
 
-    @commands.command()
+    @commands.command(aliases=['names'])
     async def past_names(self, ctx, member: discord.User):
         """Lookup past names of a member"""
         if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.message.author.roles:
@@ -69,13 +69,35 @@ class Admin(commands.Cog):
                 for row in await conn.fetch(f'select * from username{member.id} order by time desc'):
                     out += '`' + humanize_timedelta(now - row['time']) + ' `  ' + row['name'] + '\n'
             except asyncpg.UndefinedTableError:
+                await ctx.send("I don't know of any of their past usernames.")
+                return
+            if not out:
+                await ctx.send("I don't know of any of their past usernames.")
+            else:
+                await ctx.send(embed=
+                               discord.Embed(color=0x492045, title=f'Past usernames of {member}',
+                                             description=out[:2040]))
+
+    @commands.command(aliases=['nicknames'])
+    async def past_nicknames(self, ctx, member: discord.User):
+        """Lookup past nicknames of a member"""
+        if discord.utils.get(ctx.guild.roles, name='Staff') not in ctx.message.author.roles:
+            await ctx.send('This is a staff-only command.')
+            return
+        out = ''
+        now = datetime.utcnow()
+        async with self.bot.pool.acquire() as conn:
+            try:
+                for row in await conn.fetch(f'select * from nickname{member.id} order by time desc'):
+                    out += '`' + humanize_timedelta(now - row['time']) + ' `  ' + row['name'] + '\n'
+            except asyncpg.UndefinedTableError:
                 await ctx.send("I don't know of any of their past nicknames.")
                 return
             if not out:
                 await ctx.send("I don't know of any of their past nicknames.")
             else:
                 await ctx.send(embed=
-                               discord.Embed(color=0x492045, title=f'Past usernames of {member}',
+                               discord.Embed(color=0x492045, title=f'Past nicknames of {member}',
                                              description=out[:2040]))
 
     @commands.command()

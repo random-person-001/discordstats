@@ -102,6 +102,7 @@ class Sheets(commands.Cog):
         lowest = member.guild.get_role(self.bot.config['SHEETS']['lowest_xp_roll'])
         highest = member.guild.get_role(self.bot.config['SHEETS']['highest_xp_roll'])
         if not lowest or not highest:
+            print("xp rolls not found!")
             return 'xp rolls not found!'
         for roll in member.roles[::-1]:
             if lowest <= roll <= highest:
