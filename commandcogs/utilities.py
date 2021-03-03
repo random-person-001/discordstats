@@ -37,13 +37,6 @@ class Utility(commands.Cog):
         self.paginators = []
         self.image_muted_chans = set()  # ids
 
-    @commands.Cog.listener()
-    async def on_message(self, msg):
-        bot_room = 391753740253921282
-        if msg.channel.id == bot_room and not msg.author.bot and msg.content.lower() == '!levels':
-            url = "<https://www.youtube.com/watch?v=rtD59BUX6K8>"
-            await msg.channel.send(url)
-
     @commands.command()
     @commands.cooldown(1, 10)
     async def staff(self, ctx):
