@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from os import listdir
 from os.path import isfile, isdir, join
 
+import asyncpg
 import discord
 import psutil
 import toml
@@ -36,6 +37,39 @@ class Utility(commands.Cog):
         self.bot = bot
         self.paginators = []
         self.image_muted_chans = set()  # ids
+
+    @commands.command(hidden=True)
+    async def emojistats(self, ctx):
+        """yeet"""
+        from collections import OrderedDict
+        await ctx.send("working.....")
+        channel_ids = [channel.id for channel in ctx.bot.get_guild(391743485616717824).channels]
+        ok_ids = []
+        async with self.bot.pool.acquire() as conn:
+            for idy in channel_ids:
+                try:
+                    await conn.execute(f"select id from c{idy} limit 1")
+                    ok_ids.append(idy)
+                except asyncpg.exceptions.UndefinedTableError:
+                    pass
+        query = " UNION ALL ".join(f"select reactions from c{idy} where reactions is not null" for idy in ok_ids) + ";"
+        totals = OrderedDict()
+        async with self.bot.pool.acquire() as conn:
+            # reactiongroup like {"👍": [266162291735658496, 381097378012463107], "👎": [266162291735658496],
+            for row in await conn.fetch(query):
+                for reactiongroup in row:
+                    for emoji in reactiongroup:
+                        if emoji not in totals:
+                            totals[emoji] = len(reactiongroup[emoji])
+                        else:
+                            totals[emoji] += len(reactiongroup[emoji])
+        # for line in [f"{totals[key]} - {key}\n" for key in sorted(totals, key=lambda element: totals[element])]:
+        #    print(line)
+
+        for key in sorted(totals, key=lambda key: totals[key]):
+            if ":" in key and "<a:" not in key:
+                print(totals[key], key)
+        await ctx.send("printed to console")
 
     @commands.command()
     @commands.cooldown(1, 10)
