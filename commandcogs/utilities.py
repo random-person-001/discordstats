@@ -44,6 +44,7 @@ class Utility(commands.Cog):
         from collections import OrderedDict
         await ctx.send("working.....")
         channel_ids = [channel.id for channel in ctx.bot.get_guild(391743485616717824).channels]
+        server_emojis = [emoji.id for emoji in ctx.bot.get_guild(391743485616717824).emojis]
         ok_ids = []
         async with self.bot.pool.acquire() as conn:
             for idy in channel_ids:
@@ -63,11 +64,16 @@ class Utility(commands.Cog):
                             totals[emoji] = len(reactiongroup[emoji])
                         else:
                             totals[emoji] += len(reactiongroup[emoji])
+
         # for line in [f"{totals[key]} - {key}\n" for key in sorted(totals, key=lambda element: totals[element])]:
         #    print(line)
 
+        def id_part(emojistr: str):
+            last_i = -1
+            return int(emojistr[emojistr.rfind(":") + 1: -1])
+
         for key in sorted(totals, key=lambda key: totals[key]):
-            if ":" in key and "<a:" not in key:
+            if ":" in key and "<a:" not in key and id_part(key) in server_emojis:
                 print(totals[key], key)
         await ctx.send("printed to console")
 
