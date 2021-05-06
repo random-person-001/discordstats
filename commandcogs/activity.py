@@ -30,8 +30,12 @@ class Activity(commands.Cog):
             user = msg.guild.get_member(147124933783322633)
             if msg.channel.permissions_for(user).read_messages and msg.author.id != user.id:
                 await user.send(txt, embed=embed)
-        if 'locke' in msg.content.lower() and 'locked' not in msg.content.lower():
+        if 'locke' in msg.content.lower() and not any(exception_ in msg.content.lower() for exception_ in ('locked', 'locker', 'locket')):
             user = msg.guild.get_member(275384719024193538)
+            if msg.channel.permissions_for(user).read_messages and msg.author.id != user.id:
+                await user.send(txt, embed=embed)
+        if any(key in msg.content.lower() for key in ('rishil', 'positron')):
+            user = msg.guild.get_member(711171211995906128)
             if msg.channel.permissions_for(user).read_messages and msg.author.id != user.id:
                 await user.send(txt, embed=embed)
 
